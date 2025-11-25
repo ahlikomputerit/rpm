@@ -1,0 +1,62 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Generator RPM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.20.0",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1"
+  }
+}
+</script>
+<style>
+  .ai-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+  .ai-content th,
+  .ai-content td {
+    border: 1px solid #e2e8f0;
+    padding: 0.75rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  .ai-content th {
+    background-color: #f7fafc;
+    font-weight: 600;
+  }
+  .ai-content ul,
+  .ai-content ol {
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+  }
+   .ai-content li {
+    margin-bottom: 0.25rem;
+  }
+  .ai-content h1, .ai-content h2, .ai-content h3, .ai-content h4, .ai-content h5 {
+    font-weight: bold;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .ai-content p {
+    margin-bottom: 1rem;
+  }
+</style>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-100">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

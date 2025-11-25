@@ -1,0 +1,5 @@
+{
+  "name": "Generator Rencana Pembelajaran Mendalam (RPM)",
+  "description": "Aplikasi untuk membuat Rencana Pembelajaran Mendalam (RPM) secara otomatis untuk berbagai jenjang pendidikan dan mata pelajaran menggunakan AI.",
+  "requestFramePermissions": []
+}
