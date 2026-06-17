@@ -1,0 +1,21 @@
+{
+  "name": "blynk-iot-svelte",
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "mqtt": "^5.10.1"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@tailwindcss/vite": "^4.1.0",
+    "svelte": "^5.0.0",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.3.0"
+  }
+}
