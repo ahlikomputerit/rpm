@@ -23,21 +23,34 @@ function makeParticleField(count: number, spread: THREE.Vector3, color: number, 
   return new THREE.Points(geometry, material);
 }
 
-function makeKelp(x: number, z: number, height: number, color: number) {
+function makeTrunk(x: number, z: number, height: number, radius: number, color: number) {
   const group = new THREE.Group();
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.08, height, 6), new THREE.MeshStandardMaterial({ color, roughness: 0.9, metalness: 0 }));
-  stem.position.y = height / 2 - 3.7;
-  group.add(stem);
-  for (let i = 0; i < 4; i += 1) {
-    const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.2 + i * 0.035, 8, 5), new THREE.MeshStandardMaterial({ color: 0x104e50, roughness: 0.85 }));
-    leaf.scale.set(0.35, 1.7, 0.12);
-    leaf.position.set(Math.sin(i * 2.5) * 0.25, -2.8 + i * 0.72, Math.cos(i * 1.8) * 0.12);
-    leaf.rotation.z = -0.35 + i * 0.18;
-    group.add(leaf);
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.78, radius, height, 10), new THREE.MeshStandardMaterial({ color, roughness: 1, flatShading: true }));
+  trunk.position.y = height / 2 - 3.8;
+  trunk.rotation.z = (x % 2) * 0.035;
+  group.add(trunk);
+  for (let i = 0; i < 3; i += 1) {
+    const root = new THREE.Mesh(new THREE.CylinderGeometry(0.035, radius * 0.3, 1.8 + i * 0.32, 7), new THREE.MeshStandardMaterial({ color, roughness: 1, flatShading: true }));
+    root.position.set((i - 1) * radius * 0.8, -3.35, 0.12);
+    root.rotation.z = (i - 1) * 0.55;
+    root.rotation.x = -0.25;
+    group.add(root);
   }
   group.position.set(x, 0, z);
   return group;
 }
+
+function makeFireflyField(count: number) {
+  const group = new THREE.Group();
+  for (let i = 0; i < count; i += 1) {
+    const light = new THREE.Mesh(new THREE.SphereGeometry(0.035 + (i % 3) * 0.012, 8, 8), new THREE.MeshBasicMaterial({ color: 0xd7a45a, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending }));
+    light.position.set(Math.sin(i * 2.17) * 4.5, -1.8 + (i % 7) * 0.48, -3 - (i % 8) * 2.4);
+    light.userData.phase = i * 0.63;
+    group.add(light);
+  }
+  return group;
+}
+
 
 type CameraPath = { x: number; y: number; z: number; lookX: number; lookY: number; lookZ: number; roll: number; fov: number; swayX: number; swayY: number };
 
@@ -81,116 +94,11 @@ function mixPath(a: CameraPath, b: CameraPath, amount: number): CameraPath {
   };
 }
 
-function makeFish(x: number, y: number, z: number, scale: number, color: number) {
-  const group = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 6), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.58 }));
-  body.scale.set(1.8, 0.62, 0.52);
-  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.34, 4), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.48 }));
-  tail.rotation.z = Math.PI / 2;
-  tail.position.x = -0.34;
-  group.add(body, tail);
-  group.position.set(x, y, z);
-  group.scale.setScalar(scale);
-  return group;
-}
 
 function seededNoise(x: number, z: number, seed = 0) {
   return Math.sin(x * 1.73 + z * 0.91 + seed * 2.37) * 0.5 + Math.sin(x * 0.47 - z * 1.31 + seed) * 0.3 + Math.sin(x * 3.9 + z * 2.2) * 0.2;
 }
 
-function makeProceduralTrench() {
-  const group = new THREE.Group();
-  group.name = "procedural-trench";
-
-  const floorGeometry = new THREE.PlaneGeometry(34, 34, 34, 34);
-  floorGeometry.rotateX(-Math.PI / 2);
-  const floorPositions = floorGeometry.attributes.position;
-  for (let i = 0; i < floorPositions.count; i += 1) {
-    const x = floorPositions.getX(i);
-    const z = floorPositions.getZ(i);
-    const ridge = Math.abs(Math.sin(x * 0.75 + z * 0.14)) * 0.55;
-    const basin = Math.sin(z * 0.38) * 0.34;
-    floorPositions.setY(i, -4.35 + seededNoise(x, z, 4) * 0.22 + ridge * 0.2 + basin);
-  }
-  floorGeometry.computeVertexNormals();
-  const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x101b1d, roughness: 1, metalness: 0, flatShading: true });
-  const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-  floor.name = "sediment-floor";
-  floor.position.set(0, 0, -10);
-  group.add(floor);
-
-  [-1, 1].forEach((side) => {
-    const wallGeometry = new THREE.PlaneGeometry(8, 22, 18, 34);
-    wallGeometry.rotateY(side * Math.PI / 2);
-    const wallPositions = wallGeometry.attributes.position;
-    for (let i = 0; i < wallPositions.count; i += 1) {
-      const localY = wallPositions.getY(i);
-      const localZ = wallPositions.getZ(i);
-      const depthLift = Math.max(0, (-localZ - 3) / 14);
-      wallPositions.setX(i, side * (4.5 + seededNoise(localY, localZ, side) * 0.35 + depthLift * 1.1));
-    }
-    wallGeometry.computeVertexNormals();
-    const wallMaterial = new THREE.MeshStandardMaterial({ color: side < 0 ? 0x172b2d : 0x0d2026, roughness: 0.96, metalness: 0, side: THREE.DoubleSide, flatShading: true });
-    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-    wall.name = side < 0 ? "trench-wall-left" : "trench-wall-right";
-    wall.position.set(0, -0.1, -11);
-    group.add(wall);
-  });
-
-  const ridge = new THREE.Group();
-  ridge.name = "rock-ridge";
-  for (let i = 0; i < 18; i += 1) {
-    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.22 + (i % 4) * 0.12, 0), new THREE.MeshStandardMaterial({ color: i % 2 ? 0x253b3a : 0x1a2c30, roughness: 1, flatShading: true }));
-    rock.position.set((i % 2 ? -1 : 1) * (3.2 + (i % 5) * 0.62), -3.65 + (i % 3) * 0.12, -4.5 - i * 1.05);
-    rock.scale.y = 1.2 + (i % 3) * 0.55;
-    rock.rotation.set(i * 0.34, i * 0.52, i * 0.2);
-    ridge.add(rock);
-  }
-  group.add(ridge);
-
-  const fissures = new THREE.Group();
-  fissures.name = "bioluminescent-fissures";
-  for (let i = 0; i < 7; i += 1) {
-    const points = [
-      new THREE.Vector3(-2.8 + i * 0.9, -4.05, -5 - i * 2.3),
-      new THREE.Vector3(-2.1 + i * 0.9, -4.01, -5.65 - i * 2.3),
-      new THREE.Vector3(-1.4 + i * 0.9, -4.04, -6.1 - i * 2.3),
-    ];
-    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: 0x63cdbb, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending }));
-    fissures.add(line);
-  }
-  group.add(fissures);
-  return group;
-}
-
-
-function makeTrunk(x: number, z: number, height: number, radius: number, color: number) {
-  const group = new THREE.Group();
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.78, radius, height, 10), new THREE.MeshStandardMaterial({ color, roughness: 1, flatShading: true }));
-  trunk.position.y = height / 2 - 3.8;
-  trunk.rotation.z = (x % 2) * 0.035;
-  group.add(trunk);
-  for (let i = 0; i < 3; i += 1) {
-    const root = new THREE.Mesh(new THREE.CylinderGeometry(0.035, radius * 0.3, 1.8 + i * 0.32, 7), new THREE.MeshStandardMaterial({ color, roughness: 1, flatShading: true }));
-    root.position.set((i - 1) * radius * 0.8, -3.35, 0.12);
-    root.rotation.z = (i - 1) * 0.55;
-    root.rotation.x = -0.25;
-    group.add(root);
-  }
-  group.position.set(x, 0, z);
-  return group;
-}
-
-function makeFireflyField(count: number) {
-  const group = new THREE.Group();
-  for (let i = 0; i < count; i += 1) {
-    const light = new THREE.Mesh(new THREE.SphereGeometry(0.035 + (i % 3) * 0.012, 8, 8), new THREE.MeshBasicMaterial({ color: 0xd7a45a, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending }));
-    light.position.set((Math.sin(i * 2.17) * 0.5) * 9, -1.8 + (i % 7) * 0.48, -3 - (i % 8) * 2.4);
-    light.userData.phase = i * 0.63;
-    group.add(light);
-  }
-  return group;
-}
 
 function makeDepthRing(z: number, scale: number, color: number) {
   const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.14, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
@@ -201,22 +109,8 @@ function makeDepthRing(z: number, scale: number, color: number) {
   return ring;
 }
 
-function makeJellyfish(x: number, y: number, z: number) {
-  const group = new THREE.Group();
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.33, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x8de8d2, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending }));
-  dome.scale.y = 0.62;
-  group.add(dome);
-  for (let i = 0; i < 5; i += 1) {
-    const tentacle = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.02, 0.55 + Math.random() * 0.4, 5), new THREE.MeshBasicMaterial({ color: 0x8de8d2, transparent: true, opacity: 0.36, blending: THREE.AdditiveBlending }));
-    tentacle.position.set((i - 2) * 0.11, -0.35, 0);
-    tentacle.rotation.z = (i - 2) * 0.16;
-    group.add(tentacle);
-  }
-  group.position.set(x, y, z);
-  return group;
-}
 
-export default function ThreeForestScene({ progress, stageCount = 9, reducedMotion, creatureVisible = false, creatureKind = "jellyfish" }: ThreeForestSceneProps) {
+export default function ThreeForestScene({ progress, stageCount = 9, reducedMotion, creatureVisible = false, creatureKind = "moth" }: ThreeForestSceneProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef(progress);
   const stageCountRef = useRef(stageCount);
@@ -427,7 +321,7 @@ export default function ThreeForestScene({ progress, stageCount = 9, reducedMoti
       dust.rotation.y = elapsed * 0.008;
       dust.rotation.x = Math.sin(elapsed * 0.15) * 0.04;
       pollen.rotation.y = -elapsed * 0.004;
-      fireflies.children.forEach((light) => {
+      fireflies.children.forEach((light: THREE.Object3D) => {
         const phase = light.userData.phase as number;
         light.position.y += Math.sin(elapsed * 1.2 + phase) * 0.0008;
         const material = (light as THREE.Mesh).material as THREE.MeshBasicMaterial;

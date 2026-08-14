@@ -1,4 +1,4 @@
-/* Ocean Depths / Pelagic Editorial: the application shell stays quiet so the scroll narrative owns the viewport. */
+/* Forest Depths / Biophilic Editorial: the application shell stays quiet so the scroll narrative owns the viewport. */
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";

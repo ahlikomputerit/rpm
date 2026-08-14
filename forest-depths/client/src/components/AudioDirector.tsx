@@ -2,9 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 
 const AUDIO_URLS = [
-  "/manus-storage/ocean-depths-surface-ambience_41844ad4.wav",
-  "/manus-storage/ocean-depths-twilight-ambience_49e45c03.wav",
-  "/manus-storage/ocean-depths-abyss-ambience_ec6ba0d9.wav",
+  "/manus-storage/forest-depths-edge-ambience.wav",
+  "/manus-storage/forest-depths-understory-ambience.wav",
+  "/manus-storage/forest-depths-heartwood-ambience.wav",
 ];
 
 const CUE_FREQUENCIES = [196, 220, 247, 277, 311, 349, 392, 440, 523];
@@ -24,7 +24,7 @@ function trackForStage(stage: number) {
 }
 
 export default function AudioDirector({ activeStage, progress, reducedMotion }: AudioDirectorProps) {
-  const [muted, setMuted] = useState(() => window.localStorage.getItem("ocean-depths-muted") === "true");
+  const [muted, setMuted] = useState(() => window.localStorage.getItem("forest-depths-muted") === "true");
   const [unlocked, setUnlocked] = useState(false);
   const audioRefs = useRef<HTMLAudioElement[]>([]);
   const contextRef = useRef<AudioContext | null>(null);
@@ -35,7 +35,7 @@ export default function AudioDirector({ activeStage, progress, reducedMotion }: 
 
   useEffect(() => {
     mutedRef.current = muted;
-    window.localStorage.setItem("ocean-depths-muted", String(muted));
+    window.localStorage.setItem("forest-depths-muted", String(muted));
     audioRefs.current.forEach((audio) => { audio.muted = muted; });
   }, [muted]);
 
@@ -127,7 +127,7 @@ export default function AudioDirector({ activeStage, progress, reducedMotion }: 
   };
 
   return (
-    <button className={`audio-toggle ${muted ? "is-muted" : ""}`} onClick={toggleMute} aria-pressed={!muted} aria-label={muted ? "Enable ocean sound" : "Mute ocean sound"}>
+    <button className={`audio-toggle ${muted ? "is-muted" : ""}`} onClick={toggleMute} aria-pressed={!muted} aria-label={muted ? "Enable forest sound" : "Mute forest sound"}>
       <span className="audio-bars" aria-hidden="true"><i /><i /><i /></span>
       <span>{muted ? "SOUND OFF" : "SOUND ON"}</span>
     </button>
