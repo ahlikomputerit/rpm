@@ -1,6 +1,6 @@
-# Ocean Depths
+# Forest Depths
 
-Ocean Depths adalah pengalaman web scroll-driven bertema penyelaman dari permukaan laut menuju palung hadal. Proyek ini menggabungkan komposisi editorial, background plate, lingkungan hybrid Three.js, terrain prosedural, object PNG transparan, audio ambience, dan fallback berbasis gambar agar narasi tetap dapat dinikmati ketika WebGL atau audio tidak tersedia.
+Forest Depths adalah pengalaman web scroll-driven bertema penyelaman dari permukaan laut menuju palung hadal. Proyek ini menggabungkan komposisi editorial, background plate, lingkungan hybrid Three.js, terrain prosedural, object PNG transparan, audio ambience, dan fallback berbasis gambar agar narasi tetap dapat dinikmati ketika WebGL atau audio tidak tersedia.
 
 > Prinsip utama: **scroll bukan hanya navigasi halaman; scroll adalah kontrol perjalanan kamera melalui kedalaman laut.**
 
@@ -13,7 +13,7 @@ Ocean Depths adalah pengalaman web scroll-driven bertema penyelaman dari permuka
 | Narasi | Sembilan chapter dari surface hingga hadal edge |
 | Scroll state | Satu nilai normalized progress yang dipakai editorial layer, depth rail, camera, audio, dan object reveal |
 | Visual utama | Image plate hybrid sebagai textured planes di dunia Three.js |
-| Object detail | PNG transparan kelp, trench rocks, coral, dan jellyfish |
+| Object detail | PNG transparan canopy, trench rocks, coral, dan firefly |
 | Audio | Tiga ambience crossfade dan cue per chapter dengan autoplay-safe unlock |
 | Fallback | Image-based CSS environment, WebGL guard, reduced-motion path, texture-ready guard |
 | Hosting | Manus WebDev static frontend |
@@ -45,7 +45,7 @@ client/
     App.tsx
     index.css
     pages/Home.tsx
-    components/ThreeOceanScene.tsx
+    components/ThreeForestScene.tsx
     components/AudioDirector.tsx
 
 docs/
@@ -57,7 +57,7 @@ vite.config.ts
 server/index.ts
 ```
 
-`Home.tsx` mengelola stage data, scroll progress, chapter navigation, idle-scroll creature reveal, lazy-loading scene, dan audio director. `ThreeOceanScene.tsx` mengelola seluruh dunia 3D, termasuk camera path, textured image plates, terrain prosedural, particle field, object PNG, fish school, jellyfish, fog, lighting, dan cleanup lifecycle. `index.css` mengatur visual editorial, fallback scene, typography, depth rail, atmosphere, responsive behavior, dan kontrol audio.
+`Home.tsx` mengelola stage data, scroll progress, chapter navigation, idle-scroll creature reveal, lazy-loading scene, dan audio director. `ThreeForestScene.tsx` mengelola seluruh dunia 3D, termasuk camera path, textured image plates, terrain prosedural, particle field, object PNG, fish school, firefly, fog, lighting, dan cleanup lifecycle. `index.css` mengatur visual editorial, fallback scene, typography, depth rail, atmosphere, responsive behavior, dan kontrol audio.
 
 ## 4. Model perjalanan dan normalized progress
 
@@ -70,10 +70,10 @@ Sembilan zona utama adalah:
 | Surface | Cahaya permukaan, drift horizontal, dan air yang masih terbuka |
 | Reef | Detail organisme dan gerak kamera yang lebih hidup |
 | Thermocline | Perubahan warna, tekanan, dan transisi diagonal |
-| Kelp Cathedral | Kamera weaving melewati kelp dan siluet foreground |
+| Kelp Cathedral | Kamera weaving melewati canopy dan siluet foreground |
 | Twilight | Cahaya berkurang, orbit lebih lebar, dan bioluminesensi mulai muncul |
 | Midnight | Descent lebih vertikal dan ruang visual semakin kosong |
-| Blackwater | Rasa melayang, jarak jauh, dan objek yang muncul perlahan |
+| Blackforest | Rasa melayang, jarak jauh, dan objek yang muncul perlahan |
 | Hadal Edge | Plunge menuju palung, trench wall, dan fissure glow |
 | Abyss | Gerakan sangat lambat, fog pekat, dan ruang gelap yang luas |
 
@@ -85,7 +85,7 @@ Arsitektur visualnya adalah sebagai berikut.
 
 ```text
 PerspectiveCamera
-  ├── Near: object PNG, kelp, rocks, coral, jellyfish
+  ├── Near: object PNG, canopy, rocks, coral, firefly
   ├── Mid: fish school, ridge batu, bubbles, trench debris
   ├── Far: textured image plates dan depth tunnel
   └── Atmosphere: fog, marine snow, plankton, light shafts
@@ -97,7 +97,7 @@ Saat WebGL aktif, image stack CSS direduksi menjadi veil tipis agar textured pla
 
 Setiap chapter mempunyai `CameraPath` sendiri yang mencakup posisi kamera, look-at target, roll, FOV, sway horizontal, dan sway vertikal. Path antar chapter diinterpolasi dengan progress lokal dan easing `smoothstep`. Transition pulse digunakan untuk memberi aksen kecil pada FOV, world offset, fog, dan depth tunnel saat berpindah zona.
 
-Karakter geraknya sengaja berbeda. Surface menggunakan drift; Thermocline bergerak diagonal; Kelp Cathedral melakukan weaving; Twilight melakukan orbit; Blackwater menggunakan sway lateral; sedangkan Hadal Edge dan Abyss menekankan plunge yang lambat serta terarah.
+Karakter geraknya sengaja berbeda. Surface menggunakan drift; Thermocline bergerak diagonal; Kelp Cathedral melakukan weaving; Twilight melakukan orbit; Blackforest menggunakan sway lateral; sedangkan Hadal Edge dan Abyss menekankan plunge yang lambat serta terarah.
 
 Reduced motion menghilangkan sway, roll dinamis, particle drift, dan transition pulse. Posisi kamera masih mengikuti progress agar struktur narasi dan navigasi tetap berfungsi.
 
@@ -109,7 +109,7 @@ Terrain juga memiliki ridge batu berbasis `DodecahedronGeometry` serta garis ret
 
 ## 8. Object PNG transparan
 
-Object PNG dipakai ketika bentuk CSS tidak mampu memberikan detail organik yang cukup. Asset saat ini meliputi kelp, trench rocks, coral, dan jellyfish. Setiap object dimuat sebagai plane transparan dengan ukuran dan stage target sendiri. Object hanya diberi opacity setelah texture selesai dimuat sehingga placeholder generation tidak pernah muncul di halaman.
+Object PNG dipakai ketika bentuk CSS tidak mampu memberikan detail organik yang cukup. Asset saat ini meliputi canopy, trench rocks, coral, dan firefly. Setiap object dimuat sebagai plane transparan dengan ukuran dan stage target sendiri. Object hanya diberi opacity setelah texture selesai dimuat sehingga placeholder generation tidak pernah muncul di halaman.
 
 Asset dikompres dengan pipeline alpha-preserving. Resolusi maksimum dibatasi hingga 1536px pada sisi terpanjang, warna dikurangi menggunakan palette optimization, dan PNG disimpan dengan compression level tinggi. Ukuran hasil yang digunakan saat ini adalah sebagai berikut.
 
@@ -130,7 +130,7 @@ Sebelum membuat renderer, scene melakukan probe terhadap `webgl2` dan `webgl`. P
 
 ## 10. Audio ambience dan cue
 
-`AudioDirector.tsx` mengelola tiga ambience utama: surface–reef–kelp, twilight–midnight, dan blackwater–abyss. Volume ambience mengikuti progress kedalaman dan melakukan crossfade. Cue chapter dibuat lebih pendek dan dipicu ketika active chapter berubah.
+`AudioDirector.tsx` mengelola tiga ambience utama: surface–reef–canopy, twilight–midnight, dan blackforest–abyss. Volume ambience mengikuti progress kedalaman dan melakukan crossfade. Cue chapter dibuat lebih pendek dan dipicu ketika active chapter berubah.
 
 Browser tidak boleh dipaksa memutar suara tanpa izin. Karena itu audio melakukan unlock setelah pointer atau keyboard interaction pertama. Tombol `SOUND ON/OFF` tetap terlihat, preferensi mute disimpan secara lokal, dan reduced-motion menonaktifkan cue tambahan yang tidak esensial.
 
