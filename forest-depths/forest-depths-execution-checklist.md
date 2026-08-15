@@ -62,4 +62,4 @@
 - [x] Catat renderer, pixel ratio, canvas size, canvas availability, console errors, dan build/runtime warnings.
 - [x] Jalankan reduced-motion mobile fallback, WebGL-unavailable behavior, reload/initial mount, dan resize policy review; physical resize/GPU pass tetap direkomendasikan.
 - [x] Tulis QA report dengan batasan eksplisit bahwa sandbox mobile viewport bukan perangkat fisik.
-- [ ] Sinkronkan report dan raw measurements ke branch GitHub Forest.
+- [x] Sinkronkan report dan raw measurements ke branch GitHub Forest.
