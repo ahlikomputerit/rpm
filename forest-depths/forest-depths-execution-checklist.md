@@ -73,3 +73,18 @@
 - [x] Tambahkan troubleshooting untuk WebGL fallback, remote debugging, Safari, thermal throttling, dan asset failures.
 - [x] Sertakan template test report serta referensi resmi.
 - [x] Sinkronkan panduan ke branch GitHub Forest.
+
+## Public preview deployment
+
+- [ ] Jalankan server Forest pada port publik sementara.
+- [ ] Validasi URL publik, initial render, assets, dan runtime console.
+- [ ] Laporkan perbedaan preview sementara dan managed deployment permanen.
+
+## CI/CD deployment configuration
+
+- [x] Tambahkan GitHub Actions quality-gate workflow.
+- [x] Tambahkan workflow deploy Vercel dengan preview dan production paths.
+- [x] Tambahkan workflow deploy Netlify sebagai provider alternatif.
+- [x] Tambahkan `vercel.json`, `netlify.toml`, dan dokumentasi secrets/rollback.
+- [x] Jalankan check/build serta audit konfigurasi workflow secara lokal.
+- [ ] Sinkronkan konfigurasi CI/CD ke branch GitHub Forest.

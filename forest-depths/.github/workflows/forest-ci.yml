@@ -1,0 +1,52 @@
+name: Forest Depths CI
+
+on:
+  push:
+    branches: [forest-depths]
+    paths:
+      - "forest-depths/**"
+      - ".github/workflows/forest-ci.yml"
+  pull_request:
+    paths:
+      - "forest-depths/**"
+      - ".github/workflows/forest-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: forest-depths-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Typecheck and production build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: forest-depths
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: forest-depths/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run check
+
+      - name: Production build
+        run: pnpm run build
