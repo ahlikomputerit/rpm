@@ -28,3 +28,12 @@
 - [x] Tambahkan mute button, keyboard state, local preference, dan ARIA labels.
 - [x] Pastikan reduced-motion tidak memaksa cue tambahan atau motion audio.
 - [x] Validasi first-load runtime, typecheck, build, cleanup path, dan dokumentasi GitHub lulus; direct click automation browser tercatat sebagai keterbatasan sesi stale, bukan fatal app error.
+
+## Interaction and chapter narrative issue
+
+- [x] Definisikan hotspot data per chapter dengan asset, label, detail, dan posisi depth.
+- [x] Tambahkan interaction layer untuk hover, focus, tap, dan keyboard.
+- [x] Tambahkan progressive narrative reveal yang terkoordinasi dengan active chapter.
+- [x] Hubungkan hotspot ke PNG/plate nyata tanpa placeholder CSS object.
+- [x] Pertahankan hidden idle details, reduced-motion, contrast, dan no-overflow behavior.
+- [x] Jalankan typecheck/build, browser hotspot pass, dan dokumentasi; sinkronisasi GitHub menjadi langkah delivery berikutnya.

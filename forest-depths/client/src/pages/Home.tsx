@@ -36,6 +36,18 @@ const stages = [
   { id: "heartwood", index: "09", depth: "224 m", meters: 224, eyebrow: "THE HEARTWOOD", title: "The map ends inside the tree.", body: "At the deepest quiet, bark, root, and shadow become one continuous chamber. The forest does not reveal an answer. It keeps the question alive.", image: IMAGE_FOG, tone: "heartwood", note: "ancient core / 224 m", curiosity: "Stay until the dark feels familiar.", transitionCue: "world folds inward", cameraCharacter: "slow inward descent" },
 ];
 
+const chapterInteractions = [
+  { asset: "/manus-storage/tree_detailed_68f84c2c.png", label: "Bark trace", title: "Read the rings without cutting the tree.", detail: "The outer edge is a threshold: enough light for leaves, enough shadow for the first slow movement beneath them.", x: "11%", y: "18%", kind: "tree" },
+  { asset: "/manus-storage/plant_bushDetailed_3394e416.png", label: "Fern understorey", title: "The ground keeps a second canopy.", detail: "Look through the fronds rather than over them. Moisture collects in the lowest architecture, where small lives leave the clearest evidence.", x: "72%", y: "54%", kind: "fern" },
+  { asset: "/manus-storage/stone_largeA_9bb59ccc.png", label: "Creek stone", title: "Water remembers every soft edge.", detail: "The creek does not travel in a straight line. It edits the stone slowly, leaving a record that can be felt before it can be named.", x: "18%", y: "61%", kind: "stone" },
+  { asset: "/manus-storage/plant_bushDetailed_3394e416.png", label: "Fog fern", title: "The outline is part of the observation.", detail: "In the basin, distance is not empty space. It is a veil that lets one shape arrive before the rest of the forest does.", x: "74%", y: "22%", kind: "fog" },
+  { asset: "/manus-storage/tree_oak_d6877cf9.png", label: "Cedar memory", title: "Scale changes the meaning of quiet.", detail: "A trunk this old turns weather into architecture. Stand beneath it long enough and the ceiling begins to feel alive.", x: "10%", y: "32%", kind: "trunk" },
+  { asset: "/manus-storage/log_large_bb437177.png", label: "Thorn crossing", title: "Every opening has a cost.", detail: "The fallen log is not a barrier to solve. It is a pause the path has placed in front of the body.", x: "74%", y: "60%", kind: "log" },
+  { asset: "/manus-storage/mushroom_redGroup_cbc8ffd2.png", label: "Marsh signal", title: "One amber point answers another.", detail: "Fireflies are not decoration here. They are intervals: brief, low to the ground, and easy to miss when the eye expects a landmark.", x: "17%", y: "23%", kind: "mushroom" },
+  { asset: "/manus-storage/stone_tallA_de43a8e6.png", label: "Boundary stone", title: "A marker can outlast its meaning.", detail: "Roots gather around the stone because the forest has no obligation to preserve the line humans once drew through it.", x: "73%", y: "42%", kind: "stone" },
+  { asset: "/manus-storage/tree_detailed_68f84c2c.png", label: "Heartwood grain", title: "The deepest room is made of time.", detail: "Inside the heartwood, the map becomes material. Touch is imagined as memory: rings, pressure, dark, and the patient work of remaining.", x: "13%", y: "58%", kind: "heartwood" },
+];
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -47,6 +59,7 @@ export default function Home() {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [threeReady, setThreeReady] = useState(false);
   const [idleVisible, setIdleVisible] = useState(false);
+  const [openInteraction, setOpenInteraction] = useState<number | null>(null);
   const hasScrolledRef = useRef(false);
 
   useEffect(() => {
@@ -92,6 +105,10 @@ export default function Home() {
       window.clearTimeout(fallbackTimer);
     };
   }, [reducedMotion]);
+
+  useEffect(() => {
+    setOpenInteraction(null);
+  }, [active]);
 
   useEffect(() => {
     let idleTimer: number | undefined;
@@ -197,18 +214,36 @@ export default function Home() {
           <div className="surface-note"><span>LAT 46° 12' N</span><span>·</span><span>LONG 121° 44' W</span></div>
         </section>
 
-        {stages.slice(1).map((stage, index) => (
-          <section className={`story-panel panel align-${index % 2 === 0 ? "right" : "left"}`} id={stage.id} key={stage.id}>
-            <div className="story-copy reveal">
-              <div className="story-topline"><span>{stage.index}</span><span>{stage.note}</span></div>
-              <span className="eyebrow">{stage.eyebrow}</span>
-              <h2>{stage.title}</h2>
-              <p>{stage.body}</p>
-              {stage.curiosity ? <div className="curiosity-line"><span>FIELD QUESTION</span><strong>{stage.curiosity}</strong></div> : null}
-              <div className="story-rule"><span /><small>WALK TO CONTINUE</small><ArrowDown size={14} /></div>
-            </div>
-          </section>
-        ))}
+        {stages.slice(1).map((stage, index) => {
+          const interactionIndex = index + 1;
+          const interaction = chapterInteractions[interactionIndex];
+          const isOpen = openInteraction === interactionIndex;
+          const isActive = active === interactionIndex;
+          return (
+            <section className={`story-panel panel align-${index % 2 === 0 ? "right" : "left"} ${isActive ? "is-active" : ""}`} id={stage.id} key={stage.id}>
+              <div className="story-copy reveal">
+                <div className="story-topline"><span>{stage.index}</span><span>{stage.note}</span></div>
+                <span className="eyebrow">{stage.eyebrow}</span>
+                <h2 className={isActive ? "narrative-active" : ""}>{stage.title}</h2>
+                <p className={isActive ? "narrative-active" : ""}>{stage.body}</p>
+                {stage.curiosity ? <div className="curiosity-line"><span>FIELD QUESTION</span><strong>{stage.curiosity}</strong></div> : null}
+                <div className="story-rule"><span /><small>WALK TO CONTINUE</small><ArrowDown size={14} /></div>
+              </div>
+              <div className={`chapter-object chapter-object-${interaction.kind} ${isOpen ? "is-open" : ""}`} style={{ "--object-x": interaction.x, "--object-y": interaction.y } as React.CSSProperties}>
+                <button className="object-hotspot" type="button" onClick={() => setOpenInteraction(isOpen ? null : interactionIndex)} aria-expanded={isOpen} aria-controls={`observation-${stage.id}`}>
+                  <img src={interaction.asset} alt="" />
+                  <span className="object-pulse" aria-hidden="true" />
+                  <span className="object-label">{interaction.label}</span>
+                </button>
+                <div className="object-observation" id={`observation-${stage.id}`} aria-hidden={!isOpen}>
+                  <span>FIELD OBSERVATION / {stage.index}</span>
+                  <strong>{interaction.title}</strong>
+                  <p>{interaction.detail}</p>
+                </div>
+              </div>
+            </section>
+          );
+        })}
 
         <section className="closing-panel panel" id="closing">
           <div className="closing-copy reveal"><span className="eyebrow">AFTERLIGHT / FIELD NOTE 01</span><h2>The forest keeps its own time.</h2><p>Every walk is a reminder: the unknown is not empty. It is simply closer than our usual point of view.</p><button className="return-button" onClick={() => jumpTo(0)}>Return to the edge <ArrowUpRight size={15} /></button></div>

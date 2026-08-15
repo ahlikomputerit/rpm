@@ -19,3 +19,11 @@ The audio feature is visible in the preview as `SOUND ON` with an accessible mut
 ## Final audio browser pass
 
 After reopening the preview, the `SOUND ON` control rendered at the fixed lower edge alongside the complete Forest narrative. The browser console contained only the standard React DevTools informational line and no AudioContext, React, or asset-loading fatal error. Direct automation click remained unreliable because the browser session frequently became stale; the code path itself passes typecheck/build and the control is present with an accessible label.
+
+## Interaction browser pass
+
+The interaction layer rendered nine chapter hotspot buttons using real uploaded PNG assets. Clicking `FERN UNDERSTOREY` successfully moved the viewport into chapter 02 and preserved the hotspot, story copy, depth rail, and hidden idle observation. The browser snapshot confirmed accessible button labels for Fern, Creek Stone, Fog Fern, Cedar Memory, Thorn Crossing, Marsh Signal, Boundary Stone, and Heartwood Grain. The observation copy is present in the DOM for narrative/accessibility continuity while CSS controls its visual reveal state.
+
+## Observation card interaction
+
+A second click on `FERN UNDERSTOREY` visibly opened the `FIELD OBSERVATION / 02` card with the chapter-specific title and detail text. The card appears beside the real PNG hotspot, remains within the editorial composition, and does not cover the primary narrative copy. This confirms the click/tap interaction path in the live preview.

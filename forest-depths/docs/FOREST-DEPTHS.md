@@ -18,6 +18,12 @@ Large media is stored outside the source tree and uploaded through lifecycle-saf
 
 The camera paths remain chapter-specific and are interpolated with eased local progress. Forest-specific motion includes canopy drift, root-floor parallax, fog-density changes, woodland dust, firefly pulses, and a slow inward heartwood descent.
 
+## Interaction and chapter narrative
+
+Each non-hero chapter owns one `chapterInteractions` record in `client/src/pages/Home.tsx`. The record maps a real uploaded PNG asset to a label, observation title, detail copy, position, and semantic kind. The interaction layer renders the PNG as a keyboard/touch-safe button with `aria-expanded` and `aria-controls`, then reveals a chapter-local observation card without replacing or hiding the primary narrative.
+
+The active chapter resets any previously open observation so the page does not carry stale context across a scroll transition. The active story heading and body receive a restrained narrative-rise reveal, while the hotspot image uses a subtle scale and pulse. Reduced motion disables the pulse and reveal animation but preserves all text, controls, and focus behavior. The observation copy remains in the DOM for accessible reading and WebGL-free fallback.
+
 ## Audio director
 
 `client/src/components/AudioDirector.tsx` creates three optional woodland ambience beds with Web Audio filtered noise: edge air and canopy, understory creek/leaf texture, and heartwood low-frequency room tone. The active bed is selected from the same chapter index used by the scroll journey and crossfaded over approximately 1.8 seconds. Each chapter transition emits a short, quiet oscillator cue with a chapter-specific frequency and filter profile.

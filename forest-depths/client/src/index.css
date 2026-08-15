@@ -206,3 +206,23 @@ h1 i { color: rgba(232,233,216,.7); font-style: italic; }
 .has-three .scene-stack { opacity: .14; }
 .has-three .scene { filter: saturate(.48) contrast(1.02) blur(1px); }
 .has-three .canopy-gradient { opacity: .72; }
+
+
+/* Forest Depths interaction layer: real PNG object hotspots reveal chapter-local field observations. */
+.story-panel.is-active .narrative-active { animation: narrative-rise .62s cubic-bezier(.23,1,.32,1) both; }
+.chapter-object { position: absolute; left: var(--object-x); top: var(--object-y); z-index: 7; width: clamp(84px, 13vw, 168px); transform: translate(-50%, -50%); pointer-events: auto; }
+.object-hotspot { position: relative; display: grid; place-items: center; width: 100%; min-height: 92px; padding: 9px; border: 1px solid transparent; background: rgba(10, 21, 13, .14); color: var(--paper); cursor: pointer; transition: border-color .25s ease, background .25s ease, transform .25s ease; }
+.object-hotspot img { display: block; width: 100%; max-height: 148px; object-fit: contain; filter: drop-shadow(0 16px 22px rgba(0,0,0,.32)); transition: transform .45s cubic-bezier(.23,1,.32,1), filter .45s ease; }
+.object-hotspot:hover, .object-hotspot:focus-visible { border-color: rgba(215,164,90,.7); background: rgba(16, 31, 19, .42); outline: none; transform: translateY(-4px); }
+.object-hotspot:hover img, .object-hotspot:focus-visible img, .chapter-object.is-open .object-hotspot img { transform: scale(1.08); filter: drop-shadow(0 18px 30px rgba(215,164,90,.22)); }
+.object-label { position: absolute; left: 0; bottom: -20px; color: var(--mint); font-size: 8px; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; opacity: .82; }
+.object-pulse { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border: 1px solid var(--mint); border-radius: 50%; box-shadow: 0 0 0 0 rgba(215,164,90,.4); animation: hotspot-pulse 2.8s ease-out infinite; }
+.object-observation { width: min(300px, 34vw); margin-top: 18px; padding: 16px 17px 18px; border-left: 1px solid var(--mint); background: rgba(12, 25, 15, .82); backdrop-filter: blur(14px); opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .32s ease, transform .32s ease; }
+.chapter-object.is-open .object-observation { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.object-observation span { display: block; margin-bottom: 9px; color: var(--mint); font-size: 8px; letter-spacing: .2em; }
+.object-observation strong { display: block; margin-bottom: 9px; color: var(--paper); font-family: 'Cormorant Garamond', serif; font-size: 25px; font-weight: 400; line-height: .98; }
+.object-observation p { margin: 0; color: rgba(232,233,216,.72); font-size: 12px; line-height: 1.55; }
+@keyframes narrative-rise { from { opacity: .45; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes hotspot-pulse { 0% { box-shadow: 0 0 0 0 rgba(215,164,90,.42); } 70% { box-shadow: 0 0 0 10px rgba(215,164,90,0); } 100% { box-shadow: 0 0 0 0 rgba(215,164,90,0); } }
+@media (prefers-reduced-motion: reduce) { .story-panel.is-active .narrative-active, .object-pulse { animation: none; } .object-hotspot img, .object-hotspot, .object-observation { transition: none; } }
+@media (max-width: 760px) { .chapter-object { left: min(var(--object-x), 67vw); top: min(var(--object-y), 72vh); width: 92px; } .object-observation { width: min(250px, calc(100vw - 112px)); } .object-hotspot img { max-height: 102px; } .object-label { font-size: 7px; } }
