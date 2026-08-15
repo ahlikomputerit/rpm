@@ -87,4 +87,4 @@
 - [x] Tambahkan workflow deploy Netlify sebagai provider alternatif.
 - [x] Tambahkan `vercel.json`, `netlify.toml`, dan dokumentasi secrets/rollback.
 - [x] Jalankan check/build serta audit konfigurasi workflow secara lokal.
-- [ ] Sinkronkan konfigurasi CI/CD ke branch GitHub Forest.
+- [x] Sinkronkan konfigurasi CI/CD ke branch GitHub Forest.
