@@ -18,10 +18,16 @@ Large media is stored outside the source tree and uploaded through lifecycle-saf
 
 The camera paths remain chapter-specific and are interpolated with eased local progress. Forest-specific motion includes canopy drift, root-floor parallax, fog-density changes, woodland dust, firefly pulses, and a slow inward heartwood descent.
 
+## Audio director
+
+`client/src/components/AudioDirector.tsx` creates three optional woodland ambience beds with Web Audio filtered noise: edge air and canopy, understory creek/leaf texture, and heartwood low-frequency room tone. The active bed is selected from the same chapter index used by the scroll journey and crossfaded over approximately 1.8 seconds. Each chapter transition emits a short, quiet oscillator cue with a chapter-specific frequency and filter profile.
+
+Audio is never started during page load. The first pointer or keyboard interaction creates the AudioContext, starts the current habitat bed, and leaves the user in control through the fixed `SOUND ON` / `SOUND OFF` button. The preference is stored under `forest-depths-muted`. Reduced motion suppresses chapter cues and sets the master audio level to zero rather than forcing extra sensory motion. All sources and the AudioContext are stopped and closed during cleanup.
+
 ## Validation
 
 Run `pnpm install --frozen-lockfile`, `pnpm run check`, and `pnpm run build`. The build should emit a separate `ThreeForestScene` chunk. Verify the page at desktop and approximately 390px mobile width, with reduced motion enabled and WebGL unavailable. A bundle-size warning may remain because Three.js is intentionally kept in a separate lazy chunk.
 
 ## Known follow-ups
 
-The current sourced plate set covers six visual candidates and is reused intentionally for the remaining chapter tones until dedicated thorn, marsh, and heartwood plates are sourced. AudioDirector remains deferred to the Forest audio issue and is not mounted in the shell while the scene and asset pipeline are stabilized.
+The current sourced plate set covers six visual candidates and is reused intentionally for the remaining chapter tones until dedicated thorn, marsh, and heartwood plates are sourced. The audio beds are intentionally procedural and do not require additional large media files; dedicated field recordings can replace them later without changing the chapter contract.

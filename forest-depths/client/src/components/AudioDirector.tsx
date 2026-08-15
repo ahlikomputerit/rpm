@@ -1,13 +1,5 @@
-/* Pelagic Editorial audio layer: quiet, optional, and always user-controlled. */
-import { useEffect, useRef, useState } from "react";
-
-const AUDIO_URLS = [
-  "/manus-storage/forest-depths-edge-ambience.wav",
-  "/manus-storage/forest-depths-understory-ambience.wav",
-  "/manus-storage/forest-depths-heartwood-ambience.wav",
-];
-
-const CUE_FREQUENCIES = [196, 220, 247, 277, 311, 349, 392, 440, 523];
+/* Forest Depths / Biophilic Editorial: optional woodland sound layer, user-controlled, quiet, and reduced-motion safe. */
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type AudioDirectorProps = {
   activeStage: number;
@@ -15,115 +7,166 @@ type AudioDirectorProps = {
   reducedMotion: boolean;
 };
 
+type Habitat = "edge" | "understory" | "heartwood";
 type AudioContextWindow = Window & { webkitAudioContext?: typeof AudioContext };
 
-function trackForStage(stage: number) {
-  if (stage <= 2) return 0;
-  if (stage <= 5) return 1;
-  return 2;
+const HABITATS: Habitat[] = ["edge", "understory", "heartwood"];
+const CUE_FREQUENCIES = [196, 220, 247, 277, 311, 349, 392, 440, 523];
+const CUE_FILTERS = [1500, 1200, 900, 780, 620, 520, 430, 340, 260];
+
+function habitatForStage(stage: number): Habitat {
+  if (stage <= 2) return "edge";
+  if (stage <= 5) return "understory";
+  return "heartwood";
+}
+
+function getAudioContext() {
+  const ctor = window.AudioContext || (window as AudioContextWindow).webkitAudioContext;
+  return ctor ? new ctor() : null;
+}
+
+function createNoiseBuffer(context: AudioContext) {
+  const length = context.sampleRate * 4;
+  const buffer = context.createBuffer(1, length, context.sampleRate);
+  const channel = buffer.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < length; i += 1) {
+    const white = Math.random() * 2 - 1;
+    last = last * 0.985 + white * 0.15;
+    channel[i] = last;
+  }
+  return buffer;
+}
+
+function connectHabitat(context: AudioContext, master: GainNode, habitat: Habitat, noiseBuffer: AudioBuffer) {
+  const source = context.createBufferSource();
+  source.buffer = noiseBuffer;
+  source.loop = true;
+  const filter = context.createBiquadFilter();
+  filter.type = habitat === "edge" ? "lowpass" : habitat === "understory" ? "bandpass" : "lowpass";
+  filter.frequency.value = habitat === "edge" ? 1200 : habitat === "understory" ? 680 : 330;
+  filter.Q.value = habitat === "understory" ? 0.7 : 0.45;
+  const gain = context.createGain();
+  gain.gain.value = 0;
+  source.connect(filter).connect(gain).connect(master);
+  source.start();
+  return { source, filter, gain };
 }
 
 export default function AudioDirector({ activeStage, progress, reducedMotion }: AudioDirectorProps) {
   const [muted, setMuted] = useState(() => window.localStorage.getItem("forest-depths-muted") === "true");
   const [unlocked, setUnlocked] = useState(false);
-  const audioRefs = useRef<HTMLAudioElement[]>([]);
   const contextRef = useRef<AudioContext | null>(null);
+  const masterRef = useRef<GainNode | null>(null);
+  const habitatsRef = useRef<Record<Habitat, ReturnType<typeof connectHabitat> | null>>({ edge: null, understory: null, heartwood: null });
+  const noiseRef = useRef<AudioBuffer | null>(null);
+  const activeHabitatRef = useRef<Habitat>(habitatForStage(activeStage));
   const lastStageRef = useRef(activeStage);
-  const currentTrackRef = useRef(trackForStage(activeStage));
-  const fadeFrameRef = useRef<number | null>(null);
   const mutedRef = useRef(muted);
+  const reducedMotionRef = useRef(reducedMotion);
 
   useEffect(() => {
     mutedRef.current = muted;
     window.localStorage.setItem("forest-depths-muted", String(muted));
-    audioRefs.current.forEach((audio) => { audio.muted = muted; });
+    if (masterRef.current) masterRef.current.gain.value = muted ? 0 : 0.16;
   }, [muted]);
 
   useEffect(() => {
-    audioRefs.current = AUDIO_URLS.map((url) => {
-      const audio = new Audio(url);
-      audio.loop = true;
-      audio.preload = "metadata";
-      audio.volume = 0;
-      audio.muted = mutedRef.current;
-      return audio;
-    });
-    return () => {
-      if (fadeFrameRef.current) cancelAnimationFrame(fadeFrameRef.current);
-      audioRefs.current.forEach((audio) => { audio.pause(); audio.src = ""; });
-      contextRef.current?.close().catch(() => undefined);
-    };
-  }, []);
+    reducedMotionRef.current = reducedMotion;
+  }, [reducedMotion]);
 
-  const playCue = (stage: number) => {
-    if (mutedRef.current || reducedMotion) return;
-    const AudioContextCtor = window.AudioContext || (window as AudioContextWindow).webkitAudioContext;
-    if (!AudioContextCtor) return;
-    const context = contextRef.current ?? new AudioContextCtor();
+  const unlock = useCallback(() => {
+    if (unlocked) {
+      if (contextRef.current?.state === "suspended") void contextRef.current.resume();
+      return;
+    }
+    const context = contextRef.current ?? getAudioContext();
+    if (!context) return;
     contextRef.current = context;
-    if (context.state === "suspended") void context.resume();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.type = stage >= 6 ? "sine" : stage >= 3 ? "triangle" : "sine";
-    oscillator.frequency.setValueAtTime(CUE_FREQUENCIES[stage] ?? 220, context.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime((CUE_FREQUENCIES[stage] ?? 220) * 0.72, context.currentTime + 1.25);
-    gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.055, context.currentTime + 0.08);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 1.35);
-    oscillator.connect(gain).connect(context.destination);
-    oscillator.start();
-    oscillator.stop(context.currentTime + 1.4);
-  };
-
-  const unlock = () => {
-    if (unlocked) return;
+    const master = context.createGain();
+    master.gain.value = mutedRef.current ? 0 : 0.16;
+    master.connect(context.destination);
+    const noiseBuffer = createNoiseBuffer(context);
+    noiseRef.current = noiseBuffer;
+    habitatsRef.current = {
+      edge: connectHabitat(context, master, "edge", noiseBuffer),
+      understory: connectHabitat(context, master, "understory", noiseBuffer),
+      heartwood: connectHabitat(context, master, "heartwood", noiseBuffer),
+    };
+    const initialHabitat = habitatForStage(activeStage);
+    activeHabitatRef.current = initialHabitat;
+    if (!mutedRef.current && !reducedMotionRef.current) habitatsRef.current[initialHabitat]?.gain.gain.setValueAtTime(1, context.currentTime);
+    masterRef.current = master;
     setUnlocked(true);
-    const context = contextRef.current;
-    if (context?.state === "suspended") void context.resume();
-    if (mutedRef.current) return;
-    const track = audioRefs.current[currentTrackRef.current];
-    if (track) void track.play().catch(() => undefined);
-  };
+    if (context.state === "suspended") void context.resume();
+  }, [unlocked]);
 
   useEffect(() => {
-    const onPointerDown = () => unlock();
-    window.addEventListener("pointerdown", onPointerDown, { once: true, passive: true });
-    return () => window.removeEventListener("pointerdown", onPointerDown);
-  });
+    const onUnlock = () => unlock();
+    window.addEventListener("pointerdown", onUnlock, { once: true, passive: true });
+    window.addEventListener("keydown", onUnlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", onUnlock);
+      window.removeEventListener("keydown", onUnlock);
+    };
+  }, [unlock]);
 
   useEffect(() => {
     if (!unlocked) return;
-    const nextTrack = trackForStage(activeStage);
-    const activeTrack = audioRefs.current[nextTrack];
-    if (!activeTrack) return;
-    if (nextTrack !== currentTrackRef.current) {
-      const previousTrack = audioRefs.current[currentTrackRef.current];
-      currentTrackRef.current = nextTrack;
-      activeTrack.volume = 0;
-      void activeTrack.play().catch(() => undefined);
-      const startedAt = performance.now();
-      const fade = (now: number) => {
-        const amount = Math.min(1, (now - startedAt) / 1800);
-        activeTrack.volume = mutedRef.current ? 0 : amount * 0.18;
-        if (previousTrack) previousTrack.volume = mutedRef.current ? 0 : (1 - amount) * 0.18;
-        if (amount < 1) fadeFrameRef.current = requestAnimationFrame(fade);
-        else previousTrack?.pause();
-      };
-      fadeFrameRef.current = requestAnimationFrame(fade);
-    }
-    if (activeStage !== lastStageRef.current) playCue(activeStage);
-    lastStageRef.current = activeStage;
-  }, [activeStage, unlocked, reducedMotion]);
+    const context = contextRef.current;
+    const target = habitatForStage(activeStage);
+    const previous = activeHabitatRef.current;
+    if (!context || target === previous) return;
+    activeHabitatRef.current = target;
+    const now = context.currentTime;
+    HABITATS.forEach((habitat) => {
+      const track = habitatsRef.current[habitat];
+      if (!track) return;
+      track.gain.gain.cancelScheduledValues(now);
+      track.gain.gain.setTargetAtTime(habitat === target && !mutedRef.current ? 1 : 0, now, 1.8);
+    });
+  }, [activeStage, unlocked]);
 
   useEffect(() => {
-    if (!unlocked || muted || reducedMotion) return;
-    const track = audioRefs.current[currentTrackRef.current];
-    if (track) track.volume = Math.min(0.2, 0.08 + progress * 0.04);
-  }, [progress, unlocked, muted, reducedMotion]);
+    if (!unlocked || !masterRef.current) return;
+    const context = contextRef.current;
+    if (!context) return;
+    masterRef.current.gain.setTargetAtTime(muted || reducedMotion ? 0 : Math.min(0.2, 0.09 + progress * 0.07), context.currentTime, 0.18);
+  }, [progress, muted, reducedMotion, unlocked]);
+
+  useEffect(() => {
+    if (!unlocked || reducedMotion || activeStage === lastStageRef.current) return;
+    const context = contextRef.current;
+    if (!context || mutedRef.current) {
+      lastStageRef.current = activeStage;
+      return;
+    }
+    const oscillator = context.createOscillator();
+    const tone = context.createGain();
+    const filter = context.createBiquadFilter();
+    const now = context.currentTime;
+    oscillator.type = activeStage >= 6 ? "sine" : activeStage >= 3 ? "triangle" : "sine";
+    oscillator.frequency.setValueAtTime(CUE_FREQUENCIES[activeStage] ?? 220, now);
+    oscillator.frequency.exponentialRampToValueAtTime((CUE_FREQUENCIES[activeStage] ?? 220) * 0.72, now + 1.05);
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(CUE_FILTERS[activeStage] ?? 500, now);
+    tone.gain.setValueAtTime(0.0001, now);
+    tone.gain.exponentialRampToValueAtTime(0.035, now + 0.06);
+    tone.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+    oscillator.connect(filter).connect(tone).connect(context.destination);
+    oscillator.start(now);
+    oscillator.stop(now + 1.25);
+    lastStageRef.current = activeStage;
+  }, [activeStage, reducedMotion, unlocked]);
+
+  useEffect(() => () => {
+    Object.values(habitatsRef.current).forEach((track) => track?.source.stop());
+    contextRef.current?.close().catch(() => undefined);
+  }, []);
 
   const toggleMute = () => {
+    unlock();
     setMuted((value) => !value);
-    if (!unlocked) unlock();
   };
 
   return (

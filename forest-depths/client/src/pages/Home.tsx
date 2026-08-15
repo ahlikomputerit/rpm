@@ -1,6 +1,7 @@
 /* Forest Depths / Biophilic Editorial: asymmetric environmental storytelling, layered real assets, quiet motion. */
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUpRight, Menu, Minus, MoveDown, X } from "lucide-react";
+import AudioDirector from "@/components/AudioDirector";
 
 const IMAGE_EDGE = "/manus-storage/8PFWBcc6WCvj_a335e405.webp";
 const IMAGE_FERN = "/manus-storage/jIj7rtVw2ZY5_f8a05998.webp";
@@ -135,6 +136,7 @@ export default function Home() {
           <LazyThreeForestScene progress={progress} stageCount={stages.length} reducedMotion={reducedMotion} creatureVisible={idleVisible} creatureKind={hiddenCreature.kind} />
         </Suspense>
       ) : null}
+      <AudioDirector activeStage={active} progress={progress} reducedMotion={reducedMotion} />
       <div className="environment" aria-hidden="true">
         <div className="scene-stack">
           {stages.map((stage, index) => (
