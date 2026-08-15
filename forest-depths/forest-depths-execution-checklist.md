@@ -46,3 +46,11 @@
 - [x] Pastikan effects tidak menutupi copy, hotspot, controls, atau focus ring.
 - [x] Terapkan reduced-motion dan mobile quality cap.
 - [x] Jalankan typecheck/build dan browser pass; sinkronisasi GitHub menjadi langkah delivery berikutnya.
+
+## Technical architecture documentation
+
+- [x] Inventaris komponen React, Three.js, CSS, audio, asset, dan state model.
+- [x] Dokumentasikan alur normalized progress dari scroll ke semua subsystem.
+- [x] Dokumentasikan lifecycle, fallback, accessibility, reduced-motion, dan performance budget.
+- [x] Tulis ringkasan arsitektur teknis lengkap beserta known limitations dan command QA.
+- [x] Validasi dokumentasi terhadap source aktual; sinkronisasi branch GitHub Forest menjadi langkah delivery berikutnya.
