@@ -37,3 +37,12 @@
 - [x] Hubungkan hotspot ke PNG/plate nyata tanpa placeholder CSS object.
 - [x] Pertahankan hidden idle details, reduced-motion, contrast, dan no-overflow behavior.
 - [x] Jalankan typecheck/build, browser hotspot pass, dan dokumentasi; sinkronisasi GitHub menjadi langkah delivery berikutnya.
+
+## Visual effects issue
+
+- [x] Definisikan budget efek, intensitas per chapter, dan prioritas fallback.
+- [x] Tambahkan CSS weather veil, leaf/rain/dust field, dan fog-of-war fallback.
+- [x] Tambahkan progress-aware particle and fog layers ke ThreeForestScene.
+- [x] Pastikan effects tidak menutupi copy, hotspot, controls, atau focus ring.
+- [x] Terapkan reduced-motion dan mobile quality cap.
+- [x] Jalankan typecheck/build dan browser pass; sinkronisasi GitHub menjadi langkah delivery berikutnya.

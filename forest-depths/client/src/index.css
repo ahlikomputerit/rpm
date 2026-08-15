@@ -226,3 +226,18 @@ h1 i { color: rgba(232,233,216,.7); font-style: italic; }
 @keyframes hotspot-pulse { 0% { box-shadow: 0 0 0 0 rgba(215,164,90,.42); } 70% { box-shadow: 0 0 0 10px rgba(215,164,90,0); } 100% { box-shadow: 0 0 0 0 rgba(215,164,90,0); } }
 @media (prefers-reduced-motion: reduce) { .story-panel.is-active .narrative-active, .object-pulse { animation: none; } .object-hotspot img, .object-hotspot, .object-observation { transition: none; } }
 @media (max-width: 760px) { .chapter-object { left: min(var(--object-x), 67vw); top: min(var(--object-y), 72vh); width: 92px; } .object-observation { width: min(250px, calc(100vw - 112px)); } .object-hotspot img { max-height: 102px; } .object-label { font-size: 7px; } }
+
+
+/* Forest Depths visual effects: atmospheric layers remain optional, low-contrast, and behind editorial content. */
+.weather-layer, .fog-of-war { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+.weather-drift { opacity: calc(.05 + var(--depth-progress) * .16); background-image: radial-gradient(ellipse at 18% 22%, rgba(215,164,90,.34) 0 1px, transparent 2px), radial-gradient(ellipse at 78% 72%, rgba(188,211,167,.22) 0 1px, transparent 2px); background-size: 180px 260px, 230px 340px; animation: weather-drift 24s linear infinite; mask-image: linear-gradient(180deg, transparent, #000 24%, #000 78%, transparent); }
+.weather-leaf-fall { opacity: calc(.02 + var(--depth-progress) * .12); background-image: radial-gradient(ellipse 3px 1px at 20% 20%, rgba(180,196,142,.48) 0 55%, transparent 60%), radial-gradient(ellipse 2px 1px at 70% 35%, rgba(215,164,90,.42) 0 55%, transparent 60%); background-size: 240px 390px, 310px 460px; transform: rotate(8deg); animation: leaf-fall 17s linear infinite; mask-image: linear-gradient(180deg, #000, transparent 92%); }
+.fog-of-war { z-index: 4; background: radial-gradient(ellipse at 52% 48%, transparent calc(18% + var(--depth-progress) * 12%), rgba(3, 10, 6, calc(.16 + var(--depth-progress) * .54)) 100%), linear-gradient(90deg, rgba(7,18,10,.22), transparent 35%, transparent 67%, rgba(7,18,10,.32)); mix-blend-mode: multiply; opacity: calc(.28 + var(--depth-progress) * .68); transition: opacity 1.2s ease, background 1.2s ease; }
+.tone-edge .fog-of-war { opacity: .18; }
+.tone-fern .weather-leaf-fall, .tone-creek .weather-leaf-fall { opacity: .26; }
+.tone-fog .weather-drift, .tone-hollow .weather-drift { opacity: .28; filter: blur(1.5px); }
+.tone-marsh .weather-drift, .tone-heartwood .weather-drift { opacity: .34; }
+@keyframes weather-drift { from { background-position: 0 -12vh, 0 8vh; } to { background-position: 7vw 112vh, -5vw -92vh; } }
+@keyframes leaf-fall { from { background-position: 0 -15vh, 4vw -20vh; } to { background-position: 9vw 112vh, -8vw 120vh; } }
+@media (prefers-reduced-motion: reduce) { .weather-layer { animation: none; } .fog-of-war { transition: none; } }
+@media (max-width: 760px) { .weather-drift { opacity: calc(.03 + var(--depth-progress) * .1); background-size: 140px 220px, 180px 280px; } .weather-leaf-fall { opacity: calc(.02 + var(--depth-progress) * .08); } .fog-of-war { opacity: calc(.24 + var(--depth-progress) * .58); } }

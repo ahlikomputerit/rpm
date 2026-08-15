@@ -27,3 +27,13 @@ The interaction layer rendered nine chapter hotspot buttons using real uploaded 
 ## Observation card interaction
 
 A second click on `FERN UNDERSTOREY` visibly opened the `FIELD OBSERVATION / 02` card with the chapter-specific title and detail text. The card appears beside the real PNG hotspot, remains within the editorial composition, and does not cover the primary narrative copy. This confirms the click/tap interaction path in the live preview.
+
+## Visual effects baseline
+
+The initial preview renders the particle field, subtle fog-of-war veil, weather drift points, forest image plate, hero copy, depth rail, and audio control without obscuring the primary text. The browser scroll helper reported no movement because the page uses the fixed environmental shell; the next progress test should use a controlled `window.scrollTo` call or chapter navigation button.
+
+## Mid-journey effects pass
+
+A controlled `window.scrollTo` moved the experience to 42% progress and chapter 05. The preview showed denser atmospheric fog, floating leaf/dust specks, the chapter plate, depth rail at approximately 111 m, the Cedar Memory PNG hotspot, and the hidden Luna moth observation. The primary heading and body remained readable above the effects layer.
+
+The browser's native scroll helper did not move the page because of the fixed shell; controlled scrolling is the reliable QA path for this experience.

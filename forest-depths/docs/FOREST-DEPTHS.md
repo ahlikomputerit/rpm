@@ -18,6 +18,14 @@ Large media is stored outside the source tree and uploaded through lifecycle-saf
 
 The camera paths remain chapter-specific and are interpolated with eased local progress. Forest-specific motion includes canopy drift, root-floor parallax, fog-density changes, woodland dust, firefly pulses, and a slow inward heartwood descent.
 
+## Visual effects
+
+The environmental effects are split into a CSS fallback and a Three.js enhancement. The fallback includes `weather-drift`, `weather-leaf-fall`, and `fog-of-war` layers behind the editorial content. Their opacity is driven by `--depth-progress` and the active tone class, with fog increasing toward the marsh and heartwood while the edge remains comparatively clear.
+
+The Three.js scene adds a restrained leaf particle field, suspended mist particles, and three semi-transparent fog curtains. Their density, opacity, and drift are progress-aware. All effects remain pointer-transparent and are positioned behind the story, hotspot buttons, depth rail, and audio control. On reduced motion, animation and drift stop while static atmospheric layers remain available. Mobile lowers particle opacity and renderer pixel ratio through the existing resize policy.
+
+The effects budget is intentionally modest: 150 leaf points, 90 mist points, three fog planes, and existing dust/pollen fields. Cleanup is covered by the scene traversal disposal path, so the new geometries and materials do not persist after unmount.
+
 ## Interaction and chapter narrative
 
 Each non-hero chapter owns one `chapterInteractions` record in `client/src/pages/Home.tsx`. The record maps a real uploaded PNG asset to a label, observation title, detail copy, position, and semantic kind. The interaction layer renders the PNG as a keyboard/touch-safe button with `aria-expanded` and `aria-controls`, then reveals a chapter-local observation card without replacing or hiding the primary narrative.

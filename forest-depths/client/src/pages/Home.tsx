@@ -172,6 +172,9 @@ export default function Home() {
         <div className="pressure-vignette" />
         <div className="particle-field particle-field-a" />
         <div className="particle-field particle-field-b" />
+        <div className="weather-layer weather-drift" />
+        <div className="weather-layer weather-leaf-fall" />
+        <div className="fog-of-war" />
         <div className="ripple-glow" />
         <div className="grain" />
       </div>

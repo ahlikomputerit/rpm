@@ -237,7 +237,23 @@ export default function ThreeForestScene({ progress, stageCount = 9, reducedMoti
 
     const dust = makeParticleField(620, new THREE.Vector3(22, 12, 24), 0xb8c9a8, 0.022);
     const pollen = makeParticleField(220, new THREE.Vector3(18, 10, 18), 0xd7a45a, 0.038);
-    world.add(dust, pollen);
+    const leafFall = makeParticleField(150, new THREE.Vector3(18, 14, 20), 0x9fb77e, 0.045);
+    const mistParticles = makeParticleField(90, new THREE.Vector3(24, 7, 18), 0x9bb2a3, 0.065);
+    (leafFall.material as THREE.PointsMaterial).opacity = 0.34;
+    (mistParticles.material as THREE.PointsMaterial).opacity = 0.16;
+    world.add(dust, pollen, leafFall, mistParticles);
+
+    const fogCurtains = new THREE.Group();
+    [-8, -14, -20].forEach((z, index) => {
+      const material = new THREE.MeshBasicMaterial({ color: 0x9bb2a3, transparent: true, opacity: 0.035 + index * 0.012, depthWrite: false, side: THREE.DoubleSide, blending: THREE.NormalBlending });
+      const curtain = new THREE.Mesh(new THREE.PlaneGeometry(28, 8), material);
+      curtain.position.set(index % 2 ? -1.4 : 1.2, -0.5 + index * 0.18, z);
+      curtain.userData.baseX = curtain.position.x;
+      curtain.userData.baseY = curtain.position.y;
+      curtain.userData.phase = index * 1.7;
+      fogCurtains.add(curtain);
+    });
+    world.add(fogCurtains);
 
     const fireflies = makeFireflyField(18);
     world.add(fireflies);
@@ -321,6 +337,22 @@ export default function ThreeForestScene({ progress, stageCount = 9, reducedMoti
       dust.rotation.y = elapsed * 0.008;
       dust.rotation.x = Math.sin(elapsed * 0.15) * 0.04;
       pollen.rotation.y = -elapsed * 0.004;
+      const weatherMotion = reducedMotionRef.current ? 0 : 1;
+      leafFall.rotation.z = Math.sin(elapsed * 0.12) * 0.035 * weatherMotion;
+      leafFall.rotation.y = elapsed * 0.01 * weatherMotion;
+      mistParticles.rotation.y = -elapsed * 0.004 * weatherMotion;
+      mistParticles.position.x = Math.sin(elapsed * 0.16) * 0.55 * weatherMotion;
+      mistParticles.position.y = Math.cos(elapsed * 0.12) * 0.18 * weatherMotion;
+      const fogIntensity = Math.max(0, Math.min(1, (depth - 0.22) * 1.35)) + transitionPulse * 0.16;
+      (leafFall.material as THREE.PointsMaterial).opacity = (0.08 + Math.max(0, 0.28 - depth * 0.12)) * (reducedMotionRef.current ? 0.55 : 1);
+      (mistParticles.material as THREE.PointsMaterial).opacity = (0.035 + fogIntensity * 0.15) * (reducedMotionRef.current ? 0.45 : 1);
+      fogCurtains.children.forEach((curtain: THREE.Object3D) => {
+        const material = (curtain as THREE.Mesh).material as THREE.MeshBasicMaterial;
+        const phase = curtain.userData.phase as number;
+        material.opacity = (0.018 + fogIntensity * 0.052) * (reducedMotionRef.current ? 0.58 : 1);
+        curtain.position.x = (curtain.userData.baseX as number) + Math.sin(elapsed * 0.11 + phase) * 0.42 * weatherMotion;
+        curtain.position.y = (curtain.userData.baseY as number) + Math.cos(elapsed * 0.09 + phase) * 0.12 * weatherMotion;
+      });
       fireflies.children.forEach((light: THREE.Object3D) => {
         const phase = light.userData.phase as number;
         light.position.y += Math.sin(elapsed * 1.2 + phase) * 0.0008;
