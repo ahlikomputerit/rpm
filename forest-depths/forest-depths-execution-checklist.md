@@ -72,4 +72,4 @@
 - [x] Tetapkan acceptance criteria dan severity classification.
 - [x] Tambahkan troubleshooting untuk WebGL fallback, remote debugging, Safari, thermal throttling, dan asset failures.
 - [x] Sertakan template test report serta referensi resmi.
-- [ ] Sinkronkan panduan ke branch GitHub Forest.
+- [x] Sinkronkan panduan ke branch GitHub Forest.
