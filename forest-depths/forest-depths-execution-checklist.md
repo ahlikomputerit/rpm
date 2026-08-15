@@ -63,3 +63,13 @@
 - [x] Jalankan reduced-motion mobile fallback, WebGL-unavailable behavior, reload/initial mount, dan resize policy review; physical resize/GPU pass tetap direkomendasikan.
 - [x] Tulis QA report dengan batasan eksplisit bahwa sandbox mobile viewport bukan perangkat fisik.
 - [x] Sinkronkan report dan raw measurements ke branch GitHub Forest.
+
+## Physical device WebGL testing guide
+
+- [x] Tetapkan matrix perangkat Android/iOS dan kondisi baseline.
+- [x] Dokumentasikan setup hosting, device preparation, hardware acceleration, dan network conditions.
+- [x] Tulis prosedur pengukuran FPS/frame time/chapter stress/thermal behavior.
+- [x] Tetapkan acceptance criteria dan severity classification.
+- [x] Tambahkan troubleshooting untuk WebGL fallback, remote debugging, Safari, thermal throttling, dan asset failures.
+- [x] Sertakan template test report serta referensi resmi.
+- [ ] Sinkronkan panduan ke branch GitHub Forest.
