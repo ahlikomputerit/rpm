@@ -54,3 +54,12 @@
 - [x] Dokumentasikan lifecycle, fallback, accessibility, reduced-motion, dan performance budget.
 - [x] Tulis ringkasan arsitektur teknis lengkap beserta known limitations dan command QA.
 - [x] Validasi dokumentasi terhadap source aktual; sinkronisasi branch GitHub Forest menjadi langkah delivery berikutnya.
+
+## E2E and mobile WebGL performance QA
+
+- [x] Jalankan E2E initial load, chapter navigation, Heartwood hotspot observation, audio toggle, dan closing content verification.
+- [x] Ukur frame count, average FPS, p95 frame duration, long frames, dan RAF continuity; mobile hardware FPS masih tidak tersertifikasi karena sandbox memakai SwiftShader/fallback.
+- [x] Catat renderer, pixel ratio, canvas size, canvas availability, console errors, dan build/runtime warnings.
+- [x] Jalankan reduced-motion mobile fallback, WebGL-unavailable behavior, reload/initial mount, dan resize policy review; physical resize/GPU pass tetap direkomendasikan.
+- [x] Tulis QA report dengan batasan eksplisit bahwa sandbox mobile viewport bukan perangkat fisik.
+- [ ] Sinkronkan report dan raw measurements ke branch GitHub Forest.

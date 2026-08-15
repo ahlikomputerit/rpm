@@ -1,0 +1,16 @@
+{
+  "mode": "headless reduced-motion mobile fallback",
+  "result": {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "reducedMotion": true,
+    "canvasCount": 0,
+    "hero": "Walk slowly.Notice what gathers.",
+    "chapterButtons": 9,
+    "hotspotButtons": 0,
+    "audioButton": "SOUND ON",
+    "bodyHeight": 9347
+  }
+}

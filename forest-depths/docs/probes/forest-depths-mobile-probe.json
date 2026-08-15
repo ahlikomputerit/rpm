@@ -1,0 +1,23 @@
+{
+  "mode": "headless mobile emulation",
+  "target": "390x844",
+  "result": {
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "dpr": 1
+    },
+    "canvas": null,
+    "renderer": null,
+    "frames": 41,
+    "elapsedMs": 5094.9,
+    "avgFps": 7.87,
+    "meanFrameMs": 127.08,
+    "p95FrameMs": 366.6,
+    "p99FrameMs": 366.7,
+    "longFramesOver33ms": 35,
+    "longFramesOver50ms": 20,
+    "droppedFrameRatio": 0.9
+  },
+  "errors": []
+}
