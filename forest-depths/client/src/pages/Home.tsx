@@ -3,13 +3,13 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUpRight, Menu, Minus, MoveDown, X } from "lucide-react";
 import AudioDirector from "@/components/AudioDirector";
 
-const IMAGE_EDGE = "/manus-storage/8PFWBcc6WCvj_a335e405.webp";
-const IMAGE_FERN = "/manus-storage/jIj7rtVw2ZY5_f8a05998.webp";
-const IMAGE_CREEK = "/manus-storage/tZRokU1Ujc6o_82a9e6a4.webp";
-const IMAGE_FOG = "/manus-storage/GDwyrw78SVr6_199cad02.webp";
-const IMAGE_CEDAR = "/manus-storage/48R5xmBdrhpZ_c0803b1e.webp";
-const IMAGE_MARSH = "/manus-storage/1aLT4ss2eJvp_4d5ddf1f.webp";
-const LOGO = "/manus-storage/forest-depths-mark_1883c897.png";
+const IMAGE_EDGE = "/forest-assets/plates/8PFWBcc6WCvj.webp";
+const IMAGE_FERN = "/forest-assets/plates/jIj7rtVw2ZY5.webp";
+const IMAGE_CREEK = "/forest-assets/plates/tZRokU1Ujc6o.webp";
+const IMAGE_FOG = "/forest-assets/plates/GDwyrw78SVr6.webp";
+const IMAGE_CEDAR = "/forest-assets/plates/48R5xmBdrhpZ.webp";
+const IMAGE_MARSH = "/forest-assets/plates/1aLT4ss2eJvp.webp";
+const LOGO = "/forest-assets/forest-depths-mark.png";
 const LazyThreeForestScene = lazy(() => import("@/components/ThreeForestScene"));
 
 const hiddenCreatures = [
@@ -37,15 +37,15 @@ const stages = [
 ];
 
 const chapterInteractions = [
-  { asset: "/manus-storage/tree_detailed_68f84c2c.png", label: "Bark trace", title: "Read the rings without cutting the tree.", detail: "The outer edge is a threshold: enough light for leaves, enough shadow for the first slow movement beneath them.", x: "11%", y: "18%", kind: "tree" },
-  { asset: "/manus-storage/plant_bushDetailed_3394e416.png", label: "Fern understorey", title: "The ground keeps a second canopy.", detail: "Look through the fronds rather than over them. Moisture collects in the lowest architecture, where small lives leave the clearest evidence.", x: "72%", y: "54%", kind: "fern" },
-  { asset: "/manus-storage/stone_largeA_9bb59ccc.png", label: "Creek stone", title: "Water remembers every soft edge.", detail: "The creek does not travel in a straight line. It edits the stone slowly, leaving a record that can be felt before it can be named.", x: "18%", y: "61%", kind: "stone" },
-  { asset: "/manus-storage/plant_bushDetailed_3394e416.png", label: "Fog fern", title: "The outline is part of the observation.", detail: "In the basin, distance is not empty space. It is a veil that lets one shape arrive before the rest of the forest does.", x: "74%", y: "22%", kind: "fog" },
-  { asset: "/manus-storage/tree_oak_d6877cf9.png", label: "Cedar memory", title: "Scale changes the meaning of quiet.", detail: "A trunk this old turns weather into architecture. Stand beneath it long enough and the ceiling begins to feel alive.", x: "10%", y: "32%", kind: "trunk" },
-  { asset: "/manus-storage/log_large_bb437177.png", label: "Thorn crossing", title: "Every opening has a cost.", detail: "The fallen log is not a barrier to solve. It is a pause the path has placed in front of the body.", x: "74%", y: "60%", kind: "log" },
-  { asset: "/manus-storage/mushroom_redGroup_cbc8ffd2.png", label: "Marsh signal", title: "One amber point answers another.", detail: "Fireflies are not decoration here. They are intervals: brief, low to the ground, and easy to miss when the eye expects a landmark.", x: "17%", y: "23%", kind: "mushroom" },
-  { asset: "/manus-storage/stone_tallA_de43a8e6.png", label: "Boundary stone", title: "A marker can outlast its meaning.", detail: "Roots gather around the stone because the forest has no obligation to preserve the line humans once drew through it.", x: "73%", y: "42%", kind: "stone" },
-  { asset: "/manus-storage/tree_detailed_68f84c2c.png", label: "Heartwood grain", title: "The deepest room is made of time.", detail: "Inside the heartwood, the map becomes material. Touch is imagined as memory: rings, pressure, dark, and the patient work of remaining.", x: "13%", y: "58%", kind: "heartwood" },
+  { asset: "/forest-assets/objects/tree_detailed.png", label: "Bark trace", title: "Read the rings without cutting the tree.", detail: "The outer edge is a threshold: enough light for leaves, enough shadow for the first slow movement beneath them.", x: "11%", y: "18%", kind: "tree" },
+  { asset: "/forest-assets/objects/plant_bushDetailed.png", label: "Fern understorey", title: "The ground keeps a second canopy.", detail: "Look through the fronds rather than over them. Moisture collects in the lowest architecture, where small lives leave the clearest evidence.", x: "72%", y: "54%", kind: "fern" },
+  { asset: "/forest-assets/objects/stone_largeA.png", label: "Creek stone", title: "Water remembers every soft edge.", detail: "The creek does not travel in a straight line. It edits the stone slowly, leaving a record that can be felt before it can be named.", x: "18%", y: "61%", kind: "stone" },
+  { asset: "/forest-assets/objects/plant_bushDetailed.png", label: "Fog fern", title: "The outline is part of the observation.", detail: "In the basin, distance is not empty space. It is a veil that lets one shape arrive before the rest of the forest does.", x: "74%", y: "22%", kind: "fog" },
+  { asset: "/forest-assets/objects/tree_oak.png", label: "Cedar memory", title: "Scale changes the meaning of quiet.", detail: "A trunk this old turns weather into architecture. Stand beneath it long enough and the ceiling begins to feel alive.", x: "10%", y: "32%", kind: "trunk" },
+  { asset: "/forest-assets/objects/log_large.png", label: "Thorn crossing", title: "Every opening has a cost.", detail: "The fallen log is not a barrier to solve. It is a pause the path has placed in front of the body.", x: "74%", y: "60%", kind: "log" },
+  { asset: "/forest-assets/objects/mushroom_redGroup.png", label: "Marsh signal", title: "One amber point answers another.", detail: "Fireflies are not decoration here. They are intervals: brief, low to the ground, and easy to miss when the eye expects a landmark.", x: "17%", y: "23%", kind: "mushroom" },
+  { asset: "/forest-assets/objects/stone_tallA.png", label: "Boundary stone", title: "A marker can outlast its meaning.", detail: "Roots gather around the stone because the forest has no obligation to preserve the line humans once drew through it.", x: "73%", y: "42%", kind: "stone" },
+  { asset: "/forest-assets/objects/tree_detailed.png", label: "Heartwood grain", title: "The deepest room is made of time.", detail: "Inside the heartwood, the map becomes material. Touch is imagined as memory: rings, pressure, dark, and the patient work of remaining.", x: "13%", y: "58%", kind: "heartwood" },
 ];
 
 function clamp(value: number, min: number, max: number) {

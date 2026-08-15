@@ -55,22 +55,22 @@ function makeFireflyField(count: number) {
 type CameraPath = { x: number; y: number; z: number; lookX: number; lookY: number; lookZ: number; roll: number; fov: number; swayX: number; swayY: number };
 
 const OBJECT_PNG_URLS = {
-  trees: "/manus-storage/tree_detailed_68f84c2c.png",
-  rocks: "/manus-storage/stone_largeA_9bb59ccc.png",
-  fern: "/manus-storage/plant_bushDetailed_3394e416.png",
-  mushroom: "/manus-storage/mushroom_redGroup_cbc8ffd2.png",
+  trees: "/forest-assets/objects/tree_detailed.png",
+  rocks: "/forest-assets/objects/stone_largeA.png",
+  fern: "/forest-assets/objects/plant_bushDetailed.png",
+  mushroom: "/forest-assets/objects/mushroom_redGroup.png",
 };
 
 const PLATE_URLS = [
-  "/manus-storage/8PFWBcc6WCvj_a335e405.webp",
-  "/manus-storage/jIj7rtVw2ZY5_f8a05998.webp",
-  "/manus-storage/tZRokU1Ujc6o_82a9e6a4.webp",
-  "/manus-storage/GDwyrw78SVr6_199cad02.webp",
-  "/manus-storage/48R5xmBdrhpZ_c0803b1e.webp",
-  "/manus-storage/jIj7rtVw2ZY5_f8a05998.webp",
-  "/manus-storage/1aLT4ss2eJvp_4d5ddf1f.webp",
-  "/manus-storage/48R5xmBdrhpZ_c0803b1e.webp",
-  "/manus-storage/GDwyrw78SVr6_199cad02.webp",
+  "/forest-assets/plates/8PFWBcc6WCvj.webp",
+  "/forest-assets/plates/jIj7rtVw2ZY5.webp",
+  "/forest-assets/plates/tZRokU1Ujc6o.webp",
+  "/forest-assets/plates/GDwyrw78SVr6.webp",
+  "/forest-assets/plates/48R5xmBdrhpZ.webp",
+  "/forest-assets/plates/jIj7rtVw2ZY5.webp",
+  "/forest-assets/plates/1aLT4ss2eJvp.webp",
+  "/forest-assets/plates/48R5xmBdrhpZ.webp",
+  "/forest-assets/plates/GDwyrw78SVr6.webp",
 ];
 
 const CAMERA_PATHS: CameraPath[] = [
