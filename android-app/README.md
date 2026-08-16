@@ -4,9 +4,9 @@ Lumen Transfer adalah aplikasi Android standalone untuk memindahkan file melalui
 
 ## Status
 
-Checkpoint ini mencakup project Kotlin + Jetpack Compose yang telah divalidasi dengan `:app:testDebugUnitTest` dan `assembleDebug`, Home/Send/Receive vertical slice, system document picker, metadata dan SHA-256, permission kamera, state ViewModel, kontrak `FrameEnvelope`, CRC32, serializer/parser, sequential frame source, ZXing QR encoder/decoder adapter, QR preview Compose, pause/resume/cancel sender loop, serta unit test protocol dan QR. APK debug yang dihasilkan berada di `app/build/outputs/apk/debug/app-debug.apk` setelah build.
+Checkpoint ini mencakup project Kotlin + Jetpack Compose yang telah divalidasi dengan `:app:testDebugUnitTest` dan `assembleDebug`, Home/Send/Receive vertical slice, system document picker, metadata dan SHA-256, permission kamera, state ViewModel, kontrak `FrameEnvelope`, CRC32, serializer/parser, sequential frame source, ZXing QR encoder/decoder adapter, QR preview Compose, pause/resume/cancel sender loop, CameraX Preview + ImageAnalysis, QR image analyzer, parser bridge, deduplication, transfer-ID validation, dan unit test protocol/QR/receiver. APK debug terbaru berada di `app/build/outputs/apk/debug/app-debug.apk` setelah build.
 
-**CameraX live analysis, receiver reconstruction, dan fountain-code redundancy belum diaktifkan.** Sender sudah dapat membuat dan mengulang frame QR secara lokal, tetapi receiver masih menampilkan placeholder karena dependency CameraX dan uji perangkat fisik belum dilakukan. Emulator berbasis browser tidak cukup untuk memvalidasi camera capture; pengujian kamera harus dilakukan pada perangkat Android nyata. Keputusan library dicatat di [`../docs/ADR-QR-CODEC.md`](../docs/ADR-QR-CODEC.md).
+**Receiver CameraX sudah terintegrasi secara kode**, menggunakan `PreviewView`, `ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888`, `STRATEGY_KEEP_ONLY_LATEST`, executor tunggal, `ImageProxy.close()` pada `finally`, dan unbind saat lifecycle berhenti. Rekonstruksi file, fountain-code redundancy, dan physical-device QA masih terbuka. Emulator berbasis browser tidak cukup untuk memvalidasi camera capture; acceptance akhir wajib dilakukan pada perangkat Android nyata. Keputusan library dicatat di [`../docs/ADR-QR-CODEC.md`](../docs/ADR-QR-CODEC.md).
 
 ## Membuka project
 

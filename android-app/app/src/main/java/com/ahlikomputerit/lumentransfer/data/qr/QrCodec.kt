@@ -12,6 +12,17 @@ interface QrDecoder {
     fun decode(matrix: QrMatrix): ByteArray?
 }
 
+interface QrImageDecoder {
+    fun decodeRgba(
+        rgba: ByteArray,
+        width: Int,
+        height: Int,
+        rowStride: Int,
+        pixelStride: Int,
+        rotationDegrees: Int,
+    ): ByteArray?
+}
+
 data class QrMatrix(
     val modules: Int,
     val darkModules: BooleanArray,

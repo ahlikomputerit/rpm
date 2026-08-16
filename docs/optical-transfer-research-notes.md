@@ -40,3 +40,13 @@ Kandidat pembanding adalah `io.github.g0dkar:qrcode-kotlin:4.5.0`. Repositori re
 Keputusan sementara: gunakan ZXing Core 3.5.4 sebagai codec dua arah untuk MVP karena satu artifact dapat menjadi encoder dan decoder, tidak membutuhkan NDK/native C++, dan berlisensi Apache-2.0. Risiko keputusan ini adalah upstream ZXing berada dalam maintenance mode, sehingga integrasi harus dibatasi melalui interface `QrEncoder`/`QrDecoder` agar dapat diganti jika physical-device benchmark tidak memenuhi target.
 
 Referensi: https://github.com/zxing/zxing, https://central.sonatype.com/artifact/com.google.zxing/core, https://github.com/g0dkar/qrcode-kotlin, https://central.sonatype.com/artifact/io.github.g0dkar/qrcode-kotlin-jvm
+
+## CameraX receiver spike — 2026-08-16
+
+Dokumentasi resmi CameraX merekomendasikan `ImageAnalysis` untuk frame yang dapat diakses CPU, analyzer yang memanggil `ImageProxy.close()` setelah analisis, dan `STRATEGY_KEEP_ONLY_LATEST` untuk pipeline non-blocking ketika decoder tidak mampu mengejar frame kamera. Preview harus menggunakan `PreviewView`, sedangkan `Preview` dan `ImageAnalysis` dibind bersama ke `ProcessCameraProvider.bindToLifecycle()`.
+
+Implementasi receiver akan memilih output `RGBA_8888` pada tahap awal agar adapter ZXing dapat menerima luminance buffer pertama secara sederhana. ImageProxy tetap ditutup dalam `finally`; hasil buffer disalin sebelum image dilepas. Camera executor akan dibuat bounded dan ditutup ketika composable/lifecycle berhenti.
+
+Permission kamera akan diminta saat pengguna masuk ke Receive flow, bukan saat first launch. UI harus menangani granted, denied/rationale, dan permanently denied secara berbeda; `RequestPermission` Activity Result Contract dipakai untuk callback lifecycle-safe. Camera binding tidak boleh dimulai sebelum permission benar-benar granted.
+
+Referensi: https://developer.android.com/media/camera/camerax/analyze, https://developer.android.com/media/camera/camerax/preview, https://developer.android.com/training/permissions/requesting

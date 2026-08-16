@@ -23,7 +23,7 @@ TDD ini sengaja memisahkan **domain protocol** dari UI, kamera, dan file system.
 | State | ViewModel + immutable UI state + event reducer | Menjaga lifecycle dan rotasi tidak merusak sesi. |
 | File input | Storage Access Framework `ACTION_OPEN_DOCUMENT` | Pengguna memilih URI tanpa permission storage luas.[3] |
 | File output | Storage Access Framework `ACTION_CREATE_DOCUMENT` | Pengguna memilih lokasi dan nama hasil secara eksplisit.[3] |
-| Camera | CameraX `Preview` + `ImageAnalysis` | Memberi pipeline frame CPU-accessible dan lifecycle-aware.[2] |
+| Camera | CameraX `Preview` + `ImageAnalysis` `1.4.1` | Memberi pipeline frame CPU-accessible dan lifecycle-aware.[2] |
 | Backpressure | `STRATEGY_KEEP_ONLY_LATEST` | Frame QR lama lebih baik dibuang daripada membuat queue kamera menumpuk.[2] |
 | QR codec | JVM/Kotlin-compatible encoder/decoder | AI Studio Android tidak mendukung NDK/native C++.[1] |
 | Transfer | Sender screen → receiver camera, no back-channel | Sesuai tujuan air-gapped optical transfer. |
@@ -324,7 +324,7 @@ Dependency harus dijaga kecil dan kompatibel dengan AI Studio. AI Studio dapat m
 |---|---|---|
 | UI | Jetpack Compose, Material 3 | Wajib. |
 | Lifecycle/state | AndroidX Lifecycle, ViewModel, Kotlin coroutines | Wajib. |
-| Camera | CameraX Preview + ImageAnalysis | Wajib untuk receiver. |
+| Camera | CameraX Preview + ImageAnalysis `1.4.1` | Terintegrasi pada receiver; physical-device QA masih terbuka. |
 | File picker | AndroidX Activity Result Contracts atau intents SAF | Wajib. |
 | QR encoder/decoder | `com.google.zxing:core:3.5.4` melalui `QrEncoder`/`QrDecoder` | Dipilih pada spike Issue #15; provisional sampai physical-device benchmark. ADR: [`docs/ADR-QR-CODEC.md`](./ADR-QR-CODEC.md). |
 | Hash | `MessageDigest` SHA-256 dari platform | Hindari dependency tambahan. |
@@ -435,7 +435,7 @@ Prompt lanjutan harus diberikan satu per satu setelah checkpoint build hijau.
 | #14 | “Implement the binary FrameEnvelope serializer/parser and golden vectors from the TDD. Keep the domain layer Android-free and add rejection tests.” |
 | #15 | Selesai pada checkpoint QR: ZXing Core 3.5.4, adapter encode/decode, binary fixture round-trip, ADR, dan dependency license note. Physical-device benchmark tetap terbuka. |
 | #16 | “Implement sender file picking, streaming SHA-256, metadata frame, sequential chunk adapter, looping QR renderer, pause/cancel, and lifecycle-safe screen-on.” |
-| #17 | “Implement CameraX Preview and ImageAnalysis with KEEP_ONLY_LATEST. Always close ImageProxy in finally. Add permission, denial, retry, and decoder adapter states.” |
+| #17 | Selesai pada checkpoint receiver: CameraX Preview/ImageAnalysis `1.4.1`, KEEP_ONLY_LATEST, RGBA analyzer, ImageProxy cleanup, permission states, QR decoder adapter, dan invalid-frame rejection. Physical-device QA tetap terbuka. |
 | #18 | “Implement bounded reconstruction, SHA-256 verification, ACTION_CREATE_DOCUMENT save flow, Unicode filename sanitization, and cleanup on cancel/failure.” |
 | #19 | “Replace sequential correctness with systematic plus repair fountain frames. Add deterministic seeds, dropped-frame/duplicate/out-of-order tests, and a documented memory bound.” |
 | #20 | “Refactor sender and receiver into an explicit immutable TransferState reducer with cancellation, lifecycle, rotation, timeout, and cleanup tests.” |
@@ -455,3 +455,6 @@ TDD dianggap terimplementasi ketika #13 sampai #24 telah melewati acceptance cri
 [3]: https://developer.android.com/training/data-storage/shared/documents-files "Android Developers — Access documents and other files from shared storage"
 [4]: https://developer.android.com/develop/ui/compose "Android Developers — Jetpack Compose"
 [5]: https://github.com/bashalarmistalt/decimen-optical-transfer/ "Decimen Optical Transfer — fountain-coded QR file transfer"
+[6]: https://developer.android.com/media/camera/camerax/analyze "Android Developers — CameraX ImageAnalysis"
+[7]: https://developer.android.com/media/camera/camerax/preview "Android Developers — CameraX PreviewView"
+[8]: https://developer.android.com/training/permissions/requesting "Android Developers — Request runtime permissions"
