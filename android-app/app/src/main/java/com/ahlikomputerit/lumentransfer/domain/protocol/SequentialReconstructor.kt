@@ -85,6 +85,7 @@ data class ReconstructionProgress(
     val recoveredBlocks: Int,
     val totalBlocks: Int,
     val fileSizeBytes: Long,
+    val equationCount: Int = recoveredBlocks,
 ) {
     val isComplete: Boolean get() = recoveredBlocks == totalBlocks
 }

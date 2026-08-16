@@ -10,8 +10,8 @@ import com.ahlikomputerit.lumentransfer.data.qr.QrMatrix
 import com.ahlikomputerit.lumentransfer.data.qr.ZxingQrEncoder
 import com.ahlikomputerit.lumentransfer.domain.model.FrameEnvelope
 import com.ahlikomputerit.lumentransfer.domain.model.FrameKind
+import com.ahlikomputerit.lumentransfer.domain.protocol.FountainFrameSource
 import com.ahlikomputerit.lumentransfer.domain.protocol.FrameSerializer
-import com.ahlikomputerit.lumentransfer.domain.protocol.SequentialFrameSource
 import com.ahlikomputerit.lumentransfer.domain.runtime.NoOpScreenOnPolicy
 import com.ahlikomputerit.lumentransfer.domain.runtime.ScreenOnPolicy
 import kotlinx.coroutines.CancellationException
@@ -54,7 +54,7 @@ class SendViewModel(
     val uiState: StateFlow<SendUiState> = _uiState.asStateFlow()
 
     private var senderJob: Job? = null
-    private var frameSource: SequentialFrameSource? = null
+    private var frameSource: FountainFrameSource? = null
 
     fun onFileSelected(uri: Uri) {
         cancelSending()
@@ -93,16 +93,16 @@ class SendViewModel(
         val selected = _uiState.value.selected ?: return
         if (senderJob?.isActive == true) return
 
-        if (frameSource == null) {
-            frameSource = SequentialFrameSource(selected.metadata) { reader.open(selected.uri) }
-        }
         screenOnPolicy.acquire()
         _uiState.update { it.copy(senderStatus = SenderStatus.Running(0, FrameKind.META)) }
         senderJob = viewModelScope.launch(Dispatchers.Default) {
             var frameNumber = (_uiState.value.senderStatus as? SenderStatus.Paused)?.frameNumber ?: 0L
             try {
+                val source = frameSource ?: kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    FountainFrameSource(selected.metadata) { reader.open(selected.uri) }
+                }.also { frameSource = it }
                 while (true) {
-                    val envelope = frameSource?.nextEnvelope() ?: break
+                    val envelope = source.nextEnvelope()
                     val qr = qrEncoder.encode(FrameSerializer.serialize(envelope))
                     frameNumber += 1
                     _uiState.update {
@@ -111,7 +111,7 @@ class SendViewModel(
                             senderStatus = SenderStatus.Running(frameNumber, envelope.kind),
                         )
                     }
-                    if (envelope.kind == FrameKind.END) frameSource?.reset()
+                    if (envelope.kind == FrameKind.END) source.reset()
                     delay(FRAME_INTERVAL_MS)
                 }
             } catch (_: CancellationException) {

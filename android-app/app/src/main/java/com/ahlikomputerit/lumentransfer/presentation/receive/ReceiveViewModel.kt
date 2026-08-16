@@ -12,9 +12,9 @@ import com.ahlikomputerit.lumentransfer.domain.model.FileMetadata
 import com.ahlikomputerit.lumentransfer.domain.model.FrameEnvelope
 import com.ahlikomputerit.lumentransfer.domain.model.FrameKind
 import com.ahlikomputerit.lumentransfer.domain.model.TransferId
+import com.ahlikomputerit.lumentransfer.domain.protocol.FountainReconstructor
 import com.ahlikomputerit.lumentransfer.domain.protocol.MetadataFrameCodec
 import com.ahlikomputerit.lumentransfer.domain.protocol.ReconstructionProgress
-import com.ahlikomputerit.lumentransfer.domain.protocol.SequentialReconstructor
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,7 +58,7 @@ class ReceiveViewModel(
     private val _uiState = MutableStateFlow(ReceiveUiState())
     val uiState: StateFlow<ReceiveUiState> = _uiState.asStateFlow()
     private val acceptedKeys = HashSet<String>()
-    private val reconstructor = SequentialReconstructor(filesDir)
+    private val reconstructor = FountainReconstructor(filesDir)
 
     fun markPermissionRequested() {
         _uiState.update { it.copy(message = "Kamera diperlukan untuk membaca QR frame.") }
@@ -112,7 +112,7 @@ class ReceiveViewModel(
                     updateForAcceptedFrame(frame, ReconstructionState.Receiving(reconstructor.progress()), metadata)
                     maybeVerifyCompleted()
                 }
-                FrameKind.SYSTEMATIC_DATA -> {
+                FrameKind.SYSTEMATIC_DATA, FrameKind.REPAIR_DATA -> {
                     val progress = reconstructor.acceptData(frame)
                     acceptedKeys.add(key)
                     updateForAcceptedFrame(frame, ReconstructionState.Receiving(progress), reconstructor.currentMetadata())
@@ -122,7 +122,6 @@ class ReceiveViewModel(
                     acceptedKeys.add(key)
                     maybeVerifyCompleted()
                 }
-                FrameKind.REPAIR_DATA -> onRejected(RejectionReason.INVALID_PROTOCOL_FRAME)
             }
         } catch (_: IllegalArgumentException) {
             onRejected(RejectionReason.INVALID_PROTOCOL_FRAME)
