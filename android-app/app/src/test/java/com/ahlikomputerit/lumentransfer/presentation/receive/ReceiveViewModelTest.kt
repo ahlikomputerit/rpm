@@ -44,6 +44,20 @@ class ReceiveViewModelTest {
         assertEquals(true, viewModel.uiState.value.isScanning)
     }
 
+    @Test
+    fun `host stop pauses scanning with actionable message`() {
+        val viewModel = ReceiveViewModel()
+        viewModel.onCameraStarted()
+
+        viewModel.onHostStopped()
+
+        assertEquals(false, viewModel.uiState.value.isScanning)
+        assertEquals(
+            "Scanning dijeda saat aplikasi tidak terlihat. Kembali ke layar ini untuk melanjutkan.",
+            viewModel.uiState.value.message,
+        )
+    }
+
     private fun frame(id: TransferId) = FrameEnvelope(
         version = 1,
         flags = 0,

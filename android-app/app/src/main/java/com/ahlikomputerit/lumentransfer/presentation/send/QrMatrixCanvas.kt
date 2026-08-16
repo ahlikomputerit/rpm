@@ -19,6 +19,7 @@ import com.ahlikomputerit.lumentransfer.data.qr.QrMatrix
 fun QrMatrixCanvas(
     matrix: QrMatrix,
     modifier: Modifier = Modifier,
+    contentDescription: String = "QR frame preview",
 ) {
     Canvas(
         modifier = modifier
@@ -26,7 +27,7 @@ fun QrMatrixCanvas(
             .aspectRatio(1f)
             .background(Color.White)
             .padding(12.dp)
-            .semantics { contentDescription = "QR frame preview" },
+            .semantics { this.contentDescription = contentDescription },
     ) {
         val moduleSize = size.minDimension / matrix.modules
         drawRect(Color.White, topLeft = Offset.Zero, size = size)

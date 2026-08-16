@@ -1,6 +1,6 @@
 # Lumen Transfer — Technical Design Document
 
-**Status:** Implemented through milestone #21; #22–#24 pending
+**Status:** Implemented through milestone #22; #23–#24 pending
 **Versi:** 1.0  
 **PRD:** [`docs/OPTICAL-TRANSFER-PRD.md`](./OPTICAL-TRANSFER-PRD.md)  
 **Issue blueprint:** [`docs/OPTICAL-TRANSFER-ISSUES.md`](./OPTICAL-TRANSFER-ISSUES.md)  
@@ -252,7 +252,7 @@ Receiver mengabaikan QR yang bukan magic `LT`, versi tidak didukung, transfer ID
 
 ### 8.1 Permission lifecycle
 
-Permission kamera diminta ketika pengguna masuk ke Receive screen, bukan saat first launch. Jika denied, tampilkan rationale dan tombol retry. Jika permanently denied, arahkan ke system settings tanpa membuka kamera secara paksa. Ketika composable hilang atau lifecycle berhenti, unbind CameraX dan close analyzer executor.
+Permission kamera diminta ketika pengguna masuk ke Receive screen, bukan saat first launch. Jika denied, tampilkan rationale dan tombol retry. Jika permanently denied, tampilkan instruksi Settings tanpa membuka kamera secara paksa. Ketika composable hilang atau lifecycle berhenti, receiver membatalkan watchdog, unbind CameraX, dan menampilkan status jeda yang dapat dibaca screen reader. Sender mem-pause loop dan melepaskan `FLAG_KEEP_SCREEN_ON` saat host berhenti; `onDispose` membatalkan sender untuk mencegah screen-on leak.
 
 ## 9. Reconstruction dan storage
 
@@ -378,7 +378,7 @@ Diagnostics diimplementasikan sebagai model immutable dan reducer pure. Snapshot
 
 ## 16. Security and privacy review
 
-MVP bukan encrypted transport. QR yang sedang tampil adalah representasi data yang dapat dibaca kamera lain. Privacy copy harus muncul sebelum transfer pertama dan ringkasannya tersedia pada settings/about. SHA-256 hanya memeriksa integritas, bukan kerahasiaan.
+MVP bukan encrypted transport. QR yang sedang tampil adalah representasi data yang dapat dibaca kamera lain. Privacy notice muncul sebelum transfer pertama dan persetujuan hanya disimpan lokal melalui SharedPreferences; ringkasan offline/privacy juga terlihat di Home. SHA-256 hanya memeriksa integritas, bukan kerahasiaan. Export diagnostics tidak menyertakan payload.
 
 P1 encryption dapat menambahkan AES-GCM. Kunci diturunkan dari passphrase manual menggunakan KDF yang tersedia dan parameter yang terdokumentasi. Nonce harus unik per transfer, authentication tag harus diverifikasi sebelum reconstruction complete, dan passphrase tidak boleh muncul di log atau disimpan tanpa persetujuan eksplisit. Enkripsi tidak boleh dianggap selesai hanya karena payload berubah menjadi ciphertext; threat model dan key handling harus diuji terpisah.
 
@@ -393,7 +393,7 @@ Urutan implementasi mengikuti issue yang telah dibuat di GitHub, yaitu #13 sampa
 | Vertical slice | #16–#18 | Sequential sender → camera receiver → reconstructed file. |
 | Reliability | #19–#20 | Fountain code, state machine, cancellation. |
 | Hardening | #21 | Diagnostics lokal, counters, throughput, dan JSON export tanpa payload. **Selesai.** |
-| Hardening | #22 | Accessibility, privacy notice, dark/landscape layout, brightness guidance, screen-on, dan accessible errors. |
+| Hardening | #22 | Privacy notice, screen-reader semantics/live regions, dark/landscape layout, brightness/distance guidance, screen-on cleanup, dan accessible errors. **Selesai.** |
 | Release | #23–#24 | Physical device QA, documentation, AI Studio handoff. |
 
 Setiap fase harus menghasilkan software yang dapat dikompilasi. Jangan menggabungkan seluruh encoder, camera pipeline, fountain decoder, dan UI dalam satu prompt besar tanpa checkpoint karena kegagalan dependency atau lifecycle akan sulit diisolasi.
@@ -441,7 +441,7 @@ Prompt lanjutan harus diberikan satu per satu setelah checkpoint build hijau.
 | #19 | Selesai pada checkpoint fountain: systematic + repair frames, deterministic seed/index selection, incremental GF(2) pivot decoder, dropped/duplicate/out-of-order tests, bounded sender store, dan ADR [`docs/ADR-FOUNTAIN-CODEC.md`](./ADR-FOUNTAIN-CODEC.md). Physical-device recovery-rate benchmark tetap terbuka. |
 | #20 | Selesai pada checkpoint state machine: immutable `TransferState`, pure reducer, `TransferStore`, sender/receiver event wiring, cancellation, timeout watchdog, rotation events, error transitions, and cleanup tests. Physical-device lifecycle QA tetap terbuka. |
 | #21 | Selesai pada checkpoint diagnostics: immutable payload-free model/reducer/store, sender/receiver event wiring, timing/counters/goodput, JSON export melalui SAF, dan unit tests. Physical-device benchmark tetap terbuka pada #23. |
-| #22 | “Add privacy notice, screen-reader semantics, dark/landscape layout, brightness/distance guidance, screen-on cleanup, and accessible error states.” |
+| #22 | Selesai pada checkpoint UX hardening: privacy notice persisted lokal sebelum first transfer, Material 3 light/dark scheme, scrollable landscape-safe screens, screen-reader labels, live-region updates, brightness/distance guidance, sender pause and receiver camera unbind on host stop, serta accessible permission/checksum/reconstruction errors. Physical-device accessibility/lifecycle QA tetap terbuka pada #23. |
 | #23 | “Prepare a physical-device QA checklist and release candidate. Test with Wi-Fi, Bluetooth, and mobile data disabled after installation.” |
 | #24 | “Write the final Android README, AI Studio ZIP handoff guide, Android Studio import steps, device test guide, troubleshooting, known limitations, and privacy statement.” |
 

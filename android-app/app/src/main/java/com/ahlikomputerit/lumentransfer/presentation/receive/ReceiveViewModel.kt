@@ -240,6 +240,18 @@ class ReceiveViewModel(
         transferStore.dispatch(TransferEvent.RotationChanged(degrees, now()))
     }
 
+    fun onHostStopped() {
+        timeoutJob?.cancel()
+        if (_uiState.value.isScanning) {
+            _uiState.update {
+                it.copy(
+                    isScanning = false,
+                    message = "Scanning dijeda saat aplikasi tidak terlihat. Kembali ke layar ini untuk melanjutkan.",
+                )
+            }
+        }
+    }
+
     fun saveDiagnostics(uri: Uri) {
         val resolver = contentResolver ?: return
         val snapshot = diagnostics.value
