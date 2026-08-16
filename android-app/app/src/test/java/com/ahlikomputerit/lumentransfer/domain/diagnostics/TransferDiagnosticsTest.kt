@@ -48,6 +48,19 @@ class TransferDiagnosticsTest {
     }
 
     @Test
+    fun `diagnostics classifies rejection reasons without payload`() {
+        var state = TransferDiagnostics(TransferRole.RECEIVE)
+        state = reduceDiagnostics(state, DiagnosticsEvent.Rejected(1, DiagnosticsRejection.QR_NOT_FOUND))
+        state = reduceDiagnostics(state, DiagnosticsEvent.Rejected(2, DiagnosticsRejection.INVALID_PROTOCOL_FRAME))
+        state = reduceDiagnostics(state, DiagnosticsEvent.Rejected(3, DiagnosticsRejection.TRANSFER_ID_MISMATCH))
+
+        assertEquals(3L, state.rejectedFrames)
+        assertEquals(1L, state.qrNotFoundFrames)
+        assertEquals(1L, state.invalidProtocolFrames)
+        assertEquals(1L, state.transferIdMismatchFrames)
+    }
+
+    @Test
     fun `reset removes previous diagnostic session`() {
         var state = reduceDiagnostics(TransferDiagnostics(TransferRole.SEND), DiagnosticsEvent.Started(1))
         state = reduceDiagnostics(state, DiagnosticsEvent.FrameEmitted(FrameKind.META, 0, 100, 2))

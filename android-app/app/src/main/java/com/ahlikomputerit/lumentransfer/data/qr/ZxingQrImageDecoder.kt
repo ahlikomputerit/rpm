@@ -3,8 +3,8 @@ package com.ahlikomputerit.lumentransfer.data.qr
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.DecodeHintType
 import com.google.zxing.ReaderException
-import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.RGBLuminanceSource
+import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeReader
 import java.util.EnumMap
 
@@ -24,6 +24,7 @@ class ZxingQrImageDecoder : QrImageDecoder {
         for (y in 0 until height) {
             for (x in 0 until width) {
                 val offset = y * rowStride + x * pixelStride
+                // CameraX RGBA_8888 exposes bytes as A, R, G, B in the first plane.
                 val alpha = rgba[offset].toInt() and 0xFF
                 val red = rgba[offset + 1].toInt() and 0xFF
                 val green = rgba[offset + 2].toInt() and 0xFF
@@ -32,22 +33,40 @@ class ZxingQrImageDecoder : QrImageDecoder {
             }
         }
 
+        val normalHints = EnumMap<DecodeHintType, Any>(DecodeHintType::class.java).apply {
+            put(DecodeHintType.TRY_HARDER, true)
+            put(DecodeHintType.POSSIBLE_FORMATS, listOf(com.google.zxing.BarcodeFormat.QR_CODE))
+        }
+        val pureHints = EnumMap<DecodeHintType, Any>(DecodeHintType::class.java).apply {
+            put(DecodeHintType.TRY_HARDER, true)
+            put(DecodeHintType.PURE_BARCODE, true)
+            put(DecodeHintType.POSSIBLE_FORMATS, listOf(com.google.zxing.BarcodeFormat.QR_CODE))
+        }
+
+        // A live camera frame normally contains preview background and perspective, so use the
+        // detector first. A pure-barcode fallback preserves compatibility with cropped fixtures.
+        val text = decodeText(argb, width, height, normalHints)
+            ?: decodeText(argb, width, height, pureHints)
+            ?: return null
+
         return try {
-            var source: com.google.zxing.LuminanceSource = RGBLuminanceSource(width, height, argb)
-            repeat((rotationDegrees.coerceAtLeast(0) / 90) % 4) {
-                source = source.rotateCounterClockwise()
-            }
-            val bitmap = BinaryBitmap(HybridBinarizer(source))
-            val hints = EnumMap<DecodeHintType, Any>(DecodeHintType::class.java).apply {
-                put(DecodeHintType.TRY_HARDER, true)
-                put(DecodeHintType.PURE_BARCODE, true)
-                put(DecodeHintType.POSSIBLE_FORMATS, listOf(com.google.zxing.BarcodeFormat.QR_CODE))
-            }
-            val result = QRCodeReader().decode(bitmap, hints)
-            java.util.Base64.getUrlDecoder().decode(result.text)
-        } catch (_: ReaderException) {
-            null
+            java.util.Base64.getUrlDecoder().decode(text)
         } catch (_: IllegalArgumentException) {
+            null
+        }
+    }
+
+    private fun decodeText(
+        argb: IntArray,
+        width: Int,
+        height: Int,
+        hints: Map<DecodeHintType, Any>,
+    ): String? {
+        return try {
+            val source = RGBLuminanceSource(width, height, argb)
+            val bitmap = BinaryBitmap(HybridBinarizer(source))
+            QRCodeReader().decode(bitmap, hints).text
+        } catch (_: ReaderException) {
             null
         }
     }

@@ -12,6 +12,7 @@ import com.ahlikomputerit.lumentransfer.data.file.DocumentSaver
 import com.ahlikomputerit.lumentransfer.data.file.UnavailableDocumentSaver
 import com.ahlikomputerit.lumentransfer.data.file.sanitizeDocumentName
 import com.ahlikomputerit.lumentransfer.domain.diagnostics.DiagnosticsEvent
+import com.ahlikomputerit.lumentransfer.domain.diagnostics.DiagnosticsRejection
 import com.ahlikomputerit.lumentransfer.domain.diagnostics.DiagnosticsStore
 import com.ahlikomputerit.lumentransfer.domain.diagnostics.TransferDiagnostics
 import com.ahlikomputerit.lumentransfer.domain.model.FileMetadata
@@ -200,7 +201,9 @@ class ReceiveViewModel(
     fun onRejected(reason: RejectionReason) {
         val diagnosticEvent = when (reason) {
             RejectionReason.DUPLICATE_FRAME -> DiagnosticsEvent.Duplicate(now())
-            else -> DiagnosticsEvent.Rejected(now())
+            RejectionReason.QR_NOT_FOUND -> DiagnosticsEvent.Rejected(now(), DiagnosticsRejection.QR_NOT_FOUND)
+            RejectionReason.INVALID_PROTOCOL_FRAME -> DiagnosticsEvent.Rejected(now(), DiagnosticsRejection.INVALID_PROTOCOL_FRAME)
+            RejectionReason.TRANSFER_ID_MISMATCH -> DiagnosticsEvent.Rejected(now(), DiagnosticsRejection.TRANSFER_ID_MISMATCH)
         }
         diagnosticsStore.dispatch(diagnosticEvent)
         _uiState.update {

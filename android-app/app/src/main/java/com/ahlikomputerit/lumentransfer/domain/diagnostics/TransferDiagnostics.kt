@@ -5,6 +5,13 @@ import com.ahlikomputerit.lumentransfer.domain.model.TransferError
 import com.ahlikomputerit.lumentransfer.domain.state.TransferPhase
 import com.ahlikomputerit.lumentransfer.domain.state.TransferRole
 
+enum class DiagnosticsRejection {
+    QR_NOT_FOUND,
+    INVALID_PROTOCOL_FRAME,
+    TRANSFER_ID_MISMATCH,
+    OTHER,
+}
+
 /** Immutable, payload-free diagnostic snapshot for a single transfer session. */
 data class TransferDiagnostics(
     val role: TransferRole,
@@ -14,6 +21,9 @@ data class TransferDiagnostics(
     val acceptedFrames: Long = 0L,
     val duplicateFrames: Long = 0L,
     val rejectedFrames: Long = 0L,
+    val qrNotFoundFrames: Long = 0L,
+    val invalidProtocolFrames: Long = 0L,
+    val transferIdMismatchFrames: Long = 0L,
     val emittedBytes: Long = 0L,
     val acceptedBytes: Long = 0L,
     val systematicFrames: Long = 0L,
@@ -49,7 +59,10 @@ sealed interface DiagnosticsEvent {
         val nowMs: Long,
     ) : DiagnosticsEvent
     data class Duplicate(val nowMs: Long) : DiagnosticsEvent
-    data class Rejected(val nowMs: Long) : DiagnosticsEvent
+    data class Rejected(
+        val nowMs: Long,
+        val category: DiagnosticsRejection = DiagnosticsRejection.OTHER,
+    ) : DiagnosticsEvent
     data class Completed(val nowMs: Long) : DiagnosticsEvent
     data class Failed(val error: TransferError, val nowMs: Long) : DiagnosticsEvent
     data class Cancelled(val nowMs: Long) : DiagnosticsEvent
@@ -85,7 +98,12 @@ fun reduceDiagnostics(state: TransferDiagnostics, event: DiagnosticsEvent): Tran
         terminalPhase = TransferPhase.RECEIVING,
     )
     is DiagnosticsEvent.Duplicate -> state.copy(duplicateFrames = state.duplicateFrames + 1)
-    is DiagnosticsEvent.Rejected -> state.copy(rejectedFrames = state.rejectedFrames + 1)
+    is DiagnosticsEvent.Rejected -> state.copy(
+        rejectedFrames = state.rejectedFrames + 1,
+        qrNotFoundFrames = state.qrNotFoundFrames + if (event.category == DiagnosticsRejection.QR_NOT_FOUND) 1 else 0,
+        invalidProtocolFrames = state.invalidProtocolFrames + if (event.category == DiagnosticsRejection.INVALID_PROTOCOL_FRAME) 1 else 0,
+        transferIdMismatchFrames = state.transferIdMismatchFrames + if (event.category == DiagnosticsRejection.TRANSFER_ID_MISMATCH) 1 else 0,
+    )
     is DiagnosticsEvent.Completed -> state.copy(endedAtMs = event.nowMs, terminalPhase = TransferPhase.SAVED)
     is DiagnosticsEvent.Failed -> state.copy(endedAtMs = event.nowMs, terminalPhase = TransferPhase.FAILED, error = event.error)
     is DiagnosticsEvent.Cancelled -> state.copy(endedAtMs = event.nowMs, terminalPhase = TransferPhase.CANCELLED, error = TransferError.SESSION_CANCELLED)
