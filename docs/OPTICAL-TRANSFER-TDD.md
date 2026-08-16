@@ -436,7 +436,7 @@ Prompt lanjutan harus diberikan satu per satu setelah checkpoint build hijau.
 | #15 | Selesai pada checkpoint QR: ZXing Core 3.5.4, adapter encode/decode, binary fixture round-trip, ADR, dan dependency license note. Physical-device benchmark tetap terbuka. |
 | #16 | “Implement sender file picking, streaming SHA-256, metadata frame, sequential chunk adapter, looping QR renderer, pause/cancel, and lifecycle-safe screen-on.” |
 | #17 | Selesai pada checkpoint receiver: CameraX Preview/ImageAnalysis `1.4.1`, KEEP_ONLY_LATEST, RGBA analyzer, ImageProxy cleanup, permission states, QR decoder adapter, dan invalid-frame rejection. Physical-device QA tetap terbuka. |
-| #18 | “Implement bounded reconstruction, SHA-256 verification, ACTION_CREATE_DOCUMENT save flow, Unicode filename sanitization, and cleanup on cancel/failure.” |
+| #18 | Selesai pada checkpoint reconstruction: metadata decoder, bounded sequential temp reconstruction, out-of-order block writes, SHA-256 verification, Unicode filename sanitization, ACTION_CREATE_DOCUMENT save flow, dan cleanup setelah save/failure. Fountain repair frames dan physical-device E2E masih terbuka. |
 | #19 | “Replace sequential correctness with systematic plus repair fountain frames. Add deterministic seeds, dropped-frame/duplicate/out-of-order tests, and a documented memory bound.” |
 | #20 | “Refactor sender and receiver into an explicit immutable TransferState reducer with cancellation, lifecycle, rotation, timeout, and cleanup tests.” |
 | #21 | “Add local diagnostics without payload logging: timing, unique/duplicate/rejected frames, goodput, source/recovered blocks, and a device benchmark export.” |

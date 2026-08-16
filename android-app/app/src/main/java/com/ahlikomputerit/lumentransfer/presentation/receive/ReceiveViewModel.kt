@@ -1,20 +1,41 @@
 package com.ahlikomputerit.lumentransfer.presentation.receive
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.ahlikomputerit.lumentransfer.data.camera.RejectionReason
+import com.ahlikomputerit.lumentransfer.data.file.DocumentSaver
+import com.ahlikomputerit.lumentransfer.data.file.UnavailableDocumentSaver
+import com.ahlikomputerit.lumentransfer.data.file.sanitizeDocumentName
+import com.ahlikomputerit.lumentransfer.domain.model.FileMetadata
 import com.ahlikomputerit.lumentransfer.domain.model.FrameEnvelope
 import com.ahlikomputerit.lumentransfer.domain.model.FrameKind
 import com.ahlikomputerit.lumentransfer.domain.model.TransferId
+import com.ahlikomputerit.lumentransfer.domain.protocol.MetadataFrameCodec
+import com.ahlikomputerit.lumentransfer.domain.protocol.ReconstructionProgress
+import com.ahlikomputerit.lumentransfer.domain.protocol.SequentialReconstructor
+import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 sealed interface CameraPermissionState {
     data object Unknown : CameraPermissionState
     data object Granted : CameraPermissionState
     data object Denied : CameraPermissionState
     data object PermanentlyDenied : CameraPermissionState
+}
+
+sealed interface ReconstructionState {
+    data object Idle : ReconstructionState
+    data class Receiving(val progress: ReconstructionProgress) : ReconstructionState
+    data class ReadyToSave(val fileName: String, val mimeType: String, val sizeBytes: Long) : ReconstructionState
+    data class Saved(val fileName: String, val sizeBytes: Long) : ReconstructionState
+    data class Failed(val message: String) : ReconstructionState
 }
 
 data class ReceiveUiState(
@@ -27,12 +48,17 @@ data class ReceiveUiState(
     val duplicateFrames: Long = 0,
     val lastFrameKind: FrameKind? = null,
     val lastSequence: Long? = null,
+    val reconstruction: ReconstructionState = ReconstructionState.Idle,
 )
 
-class ReceiveViewModel : ViewModel() {
+class ReceiveViewModel(
+    filesDir: File = File(System.getProperty("java.io.tmpdir"), "lumen-receive-default").apply { mkdirs() },
+    private val documentSaver: DocumentSaver = UnavailableDocumentSaver,
+) : ViewModel() {
     private val _uiState = MutableStateFlow(ReceiveUiState())
     val uiState: StateFlow<ReceiveUiState> = _uiState.asStateFlow()
     private val acceptedKeys = HashSet<String>()
+    private val reconstructor = SequentialReconstructor(filesDir)
 
     fun markPermissionRequested() {
         _uiState.update { it.copy(message = "Kamera diperlukan untuk membaca QR frame.") }
@@ -53,9 +79,7 @@ class ReceiveViewModel : ViewModel() {
     }
 
     fun onCameraStarted() {
-        _uiState.update {
-            it.copy(isScanning = true, message = "Scanning QR frame…")
-        }
+        _uiState.update { it.copy(isScanning = true, message = "Scanning QR frame…") }
     }
 
     fun onCameraError(error: Throwable) {
@@ -67,10 +91,6 @@ class ReceiveViewModel : ViewModel() {
         }
     }
 
-    fun onCameraFrame(frame: com.ahlikomputerit.lumentransfer.data.camera.CameraRgbaFrame) {
-        // CameraFrameAnalyzer performs decoding and calls onEnvelope/onRejected.
-    }
-
     fun onEnvelope(frame: FrameEnvelope) {
         val currentId = _uiState.value.activeTransferId
         if (currentId != null && currentId != frame.transferId) {
@@ -78,19 +98,56 @@ class ReceiveViewModel : ViewModel() {
             return
         }
         val key = "${frame.kind.wireValue}:${frame.sequence}"
-        if (!acceptedKeys.add(key)) {
+        if (acceptedKeys.contains(key)) {
             onRejected(RejectionReason.DUPLICATE_FRAME)
             return
         }
-        _uiState.update {
-            it.copy(
-                activeTransferId = currentId ?: frame.transferId,
-                isScanning = true,
-                message = "Frame diterima. Reconstruction akan ditambahkan pada tahap berikutnya.",
-                receivedFrames = it.receivedFrames + 1,
-                lastFrameKind = frame.kind,
-                lastSequence = frame.sequence,
-            )
+
+        try {
+            when (frame.kind) {
+                FrameKind.META -> {
+                    val metadata = MetadataFrameCodec.decode(frame.transferId, frame.payload)
+                    reconstructor.acceptMetadata(metadata)
+                    acceptedKeys.add(key)
+                    updateForAcceptedFrame(frame, ReconstructionState.Receiving(reconstructor.progress()), metadata)
+                    maybeVerifyCompleted()
+                }
+                FrameKind.SYSTEMATIC_DATA -> {
+                    val progress = reconstructor.acceptData(frame)
+                    acceptedKeys.add(key)
+                    updateForAcceptedFrame(frame, ReconstructionState.Receiving(progress), reconstructor.currentMetadata())
+                    maybeVerifyCompleted()
+                }
+                FrameKind.END -> {
+                    acceptedKeys.add(key)
+                    maybeVerifyCompleted()
+                }
+                FrameKind.REPAIR_DATA -> onRejected(RejectionReason.INVALID_PROTOCOL_FRAME)
+            }
+        } catch (_: IllegalArgumentException) {
+            onRejected(RejectionReason.INVALID_PROTOCOL_FRAME)
+        }
+    }
+
+    fun saveTo(uri: Uri) {
+        val ready = _uiState.value.reconstruction as? ReconstructionState.ReadyToSave ?: return
+        val source = reconstructor.verifiedFile() ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { documentSaver.save(source, uri) }
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            message = "File berhasil disimpan.",
+                            reconstruction = ReconstructionState.Saved(ready.fileName, ready.sizeBytes),
+                        )
+                    }
+                    reconstructor.cleanup()
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(reconstruction = ReconstructionState.Failed(error.message ?: "Gagal menyimpan file"))
+                    }
+                }
         }
     }
 
@@ -110,6 +167,66 @@ class ReceiveViewModel : ViewModel() {
 
     fun resetSession() {
         acceptedKeys.clear()
+        reconstructor.cleanup()
         _uiState.value = ReceiveUiState(permission = _uiState.value.permission)
+    }
+
+    override fun onCleared() {
+        reconstructor.close()
+        super.onCleared()
+    }
+
+    companion object {
+        fun factory(filesDir: File, documentSaver: DocumentSaver): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    require(modelClass.isAssignableFrom(ReceiveViewModel::class.java))
+                    return ReceiveViewModel(filesDir, documentSaver) as T
+                }
+            }
+    }
+
+    private fun updateForAcceptedFrame(
+        frame: FrameEnvelope,
+        reconstruction: ReconstructionState,
+        metadata: FileMetadata?,
+    ) {
+        _uiState.update {
+            it.copy(
+                activeTransferId = it.activeTransferId ?: frame.transferId,
+                isScanning = true,
+                message = metadata?.let { value -> "${value.fileName}: menerima frame…" }
+                    ?: "Frame diterima.",
+                receivedFrames = it.receivedFrames + 1,
+                lastFrameKind = frame.kind,
+                lastSequence = frame.sequence,
+                reconstruction = reconstruction,
+            )
+        }
+    }
+
+    private fun maybeVerifyCompleted() {
+        if (!reconstructor.isComplete()) return
+        if (reconstructor.verify()) {
+            val metadata = reconstructor.currentMetadata() ?: return
+            _uiState.update {
+                it.copy(
+                    message = "Checksum cocok. Pilih lokasi untuk menyimpan file.",
+                    reconstruction = ReconstructionState.ReadyToSave(
+                        fileName = sanitizeDocumentName(metadata.fileName),
+                        mimeType = metadata.mimeType,
+                        sizeBytes = metadata.sizeBytes,
+                    ),
+                )
+            }
+        } else {
+            _uiState.update {
+                it.copy(
+                    message = "Checksum tidak cocok. Hasil sementara dibuang.",
+                    reconstruction = ReconstructionState.Failed("INTEGRITY_MISMATCH"),
+                )
+            }
+        }
     }
 }

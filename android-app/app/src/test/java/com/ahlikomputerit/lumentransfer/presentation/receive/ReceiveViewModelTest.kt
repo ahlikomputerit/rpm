@@ -1,8 +1,10 @@
 package com.ahlikomputerit.lumentransfer.presentation.receive
 
+import com.ahlikomputerit.lumentransfer.domain.model.FileMetadata
 import com.ahlikomputerit.lumentransfer.domain.model.FrameEnvelope
 import com.ahlikomputerit.lumentransfer.domain.model.FrameKind
 import com.ahlikomputerit.lumentransfer.domain.model.TransferId
+import com.ahlikomputerit.lumentransfer.domain.protocol.MetadataFrameCodec
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -50,7 +52,17 @@ class ReceiveViewModelTest {
         seed = 0,
         degree = 0,
         sequence = 0,
-        payload = byteArrayOf(1),
+        payload = MetadataFrameCodec.encode(
+            FileMetadata(
+                transferId = id,
+                fileName = "fixture.bin",
+                mimeType = "application/octet-stream",
+                sizeBytes = 1,
+                sha256 = ByteArray(32),
+                blockSize = 256,
+                sourceBlockCount = 1,
+            ),
+        ),
         frameCrc32 = 0u,
     )
 }

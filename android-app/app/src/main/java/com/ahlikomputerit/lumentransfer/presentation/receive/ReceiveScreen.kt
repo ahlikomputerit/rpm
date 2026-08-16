@@ -1,6 +1,7 @@
 package com.ahlikomputerit.lumentransfer.presentation.receive
 
 import android.Manifest
+import android.content.Intent
 import android.app.Activity
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -61,6 +62,11 @@ fun ReceiveScreen(
             onEnvelope = viewModel::onEnvelope,
             onRejected = viewModel::onRejected,
         )
+    }
+    val saveLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        result.data?.data?.let(viewModel::saveTo)
     }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -137,6 +143,45 @@ fun ReceiveScreen(
                     state.lastFrameKind?.let { kind ->
                         Text("Frame terakhir: $kind #${state.lastSequence}", style = MaterialTheme.typography.bodySmall)
                     }
+                }
+            }
+            when (val reconstruction = state.reconstruction) {
+                ReconstructionState.Idle -> Unit
+                is ReconstructionState.Receiving -> Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Reconstruction", style = MaterialTheme.typography.titleMedium)
+                        Text("${reconstruction.progress.recoveredBlocks}/${reconstruction.progress.totalBlocks} block")
+                    }
+                }
+                is ReconstructionState.ReadyToSave -> Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Checksum cocok", style = MaterialTheme.typography.titleMedium)
+                        Text("${reconstruction.fileName} · ${reconstruction.sizeBytes} bytes")
+                        Button(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                                    type = reconstruction.mimeType
+                                    putExtra(Intent.EXTRA_TITLE, reconstruction.fileName)
+                                    addCategory(Intent.CATEGORY_OPENABLE)
+                                }
+                                saveLauncher.launch(intent)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text("Simpan file") }
+                    }
+                }
+                is ReconstructionState.Saved -> Card(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "Tersimpan: ${reconstruction.fileName} (${reconstruction.sizeBytes} bytes)",
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
+                is ReconstructionState.Failed -> Card(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "Reconstruction gagal: ${reconstruction.message}",
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.error,
+                    )
                 }
             }
             when (state.permission) {
