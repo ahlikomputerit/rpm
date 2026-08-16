@@ -13,6 +13,15 @@ interface QrDecoder {
 }
 
 interface QrImageDecoder {
+    fun decodeLuma(
+        luma: ByteArray,
+        width: Int,
+        height: Int,
+        rowStride: Int,
+        pixelStride: Int,
+        rotationDegrees: Int,
+    ): ByteArray? = null
+
     fun decodeRgba(
         rgba: ByteArray,
         width: Int,

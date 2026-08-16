@@ -19,14 +19,24 @@ class CameraFrameAnalyzer(
             val luma = sampleLuminance(frame)
             onFrameObserved(frame, luma.min, luma.max, luma.mean)
         }
-        val bytes = qrDecoder.decodeRgba(
-            rgba = frame.bytes,
-            width = frame.width,
-            height = frame.height,
-            rowStride = frame.rowStride,
-            pixelStride = frame.pixelStride,
-            rotationDegrees = frame.rotationDegrees,
-        ) ?: run {
+        val bytes = when (frame.format) {
+            CameraFrameFormat.LUMA_8 -> qrDecoder.decodeLuma(
+                luma = frame.bytes,
+                width = frame.width,
+                height = frame.height,
+                rowStride = frame.rowStride,
+                pixelStride = frame.pixelStride,
+                rotationDegrees = frame.rotationDegrees,
+            )
+            CameraFrameFormat.RGBA_8888 -> qrDecoder.decodeRgba(
+                rgba = frame.bytes,
+                width = frame.width,
+                height = frame.height,
+                rowStride = frame.rowStride,
+                pixelStride = frame.pixelStride,
+                rotationDegrees = frame.rotationDegrees,
+            )
+        } ?: run {
             onRejected(RejectionReason.QR_NOT_FOUND)
             return
         }
@@ -50,10 +60,14 @@ class CameraFrameAnalyzer(
             for (x in 0 until frame.width step xStep) {
                 val offset = y * frame.rowStride + x * frame.pixelStride
                 if (offset < 0 || offset + 3 >= frame.bytes.size) continue
-                val red = frame.bytes[offset].toInt() and 0xFF
-                val green = frame.bytes[offset + 1].toInt() and 0xFF
-                val blue = frame.bytes[offset + 2].toInt() and 0xFF
-                val luma = (299 * red + 587 * green + 114 * blue) / 1_000
+                val luma = if (frame.format == CameraFrameFormat.LUMA_8) {
+                    frame.bytes[offset].toInt() and 0xFF
+                } else {
+                    val red = frame.bytes[offset].toInt() and 0xFF
+                    val green = frame.bytes[offset + 1].toInt() and 0xFF
+                    val blue = frame.bytes[offset + 2].toInt() and 0xFF
+                    (299 * red + 587 * green + 114 * blue) / 1_000
+                }
                 min = minOf(min, luma)
                 max = maxOf(max, luma)
                 sum += luma

@@ -10,6 +10,26 @@ import com.google.zxing.qrcode.QRCodeReader
 import java.util.EnumMap
 
 class ZxingQrImageDecoder : QrImageDecoder {
+    override fun decodeLuma(
+        luma: ByteArray,
+        width: Int,
+        height: Int,
+        rowStride: Int,
+        pixelStride: Int,
+        rotationDegrees: Int,
+    ): ByteArray? {
+        if (width <= 0 || height <= 0 || pixelStride <= 0 || rowStride < width * pixelStride) return null
+        if (luma.size < rowStride * height) return null
+        val argb = IntArray(width * height)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val value = luma[y * rowStride + x * pixelStride].toInt() and 0xFF
+                argb[y * width + x] = (0xFF shl 24) or (value shl 16) or (value shl 8) or value
+            }
+        }
+        return decodeArgb(argb, width, height)
+    }
+
     override fun decodeRgba(
         rgba: ByteArray,
         width: Int,
@@ -33,7 +53,10 @@ class ZxingQrImageDecoder : QrImageDecoder {
                 argb[y * width + x] = (alpha shl 24) or (red shl 16) or (green shl 8) or blue
             }
         }
+        return decodeArgb(argb, width, height)
+    }
 
+    private fun decodeArgb(argb: IntArray, width: Int, height: Int): ByteArray? {
         val hints = EnumMap<DecodeHintType, Any>(DecodeHintType::class.java).apply {
             put(DecodeHintType.TRY_HARDER, true)
             put(DecodeHintType.POSSIBLE_FORMATS, listOf(com.google.zxing.BarcodeFormat.QR_CODE))
@@ -44,8 +67,6 @@ class ZxingQrImageDecoder : QrImageDecoder {
             put(DecodeHintType.POSSIBLE_FORMATS, listOf(com.google.zxing.BarcodeFormat.QR_CODE))
         }
 
-        // Try the complete preview first, then center crops. A phone screen is normally centered
-        // in the receiver preview, and a crop gives the detector more pixels per QR module.
         val candidates = listOf(
             Crop(0, 0, width, height),
             centeredCrop(width, height, 0.80f),
@@ -53,12 +74,13 @@ class ZxingQrImageDecoder : QrImageDecoder {
         )
         for (crop in candidates) {
             for (global in listOf(false, true)) {
-                decodeText(argb, width, height, crop, hints, global)?.let { return decodeBase64(it) }
+                decodeText(argb, width, height, crop, hints, global)?.let { decoded ->
+                    decodeBase64(decoded)?.let { return it }
+                }
             }
         }
-        // Preserve compatibility with a QR bitmap that is already cropped to barcode-only input.
-        decodeText(argb, width, height, Crop(0, 0, width, height), pureHints, global = false)?.let {
-            return decodeBase64(it)
+        decodeText(argb, width, height, Crop(0, 0, width, height), pureHints, global = false)?.let { decoded ->
+            decodeBase64(decoded)?.let { return it }
         }
         return null
     }

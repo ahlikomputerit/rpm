@@ -38,6 +38,35 @@ class ZxingQrImageDecoderTest {
     }
 
     @Test
+    fun `luma plane decodes an encoded protocol frame`() {
+        val frame = FrameEnvelope(
+            version = 1,
+            flags = 0,
+            transferId = TransferId(ByteArray(16) { it.toByte() }),
+            kind = FrameKind.META,
+            seed = 0,
+            degree = 0,
+            sequence = 2,
+            payload = "luma-fixture".toByteArray(),
+            frameCrc32 = 0u,
+        )
+        val encoded = FrameSerializer.serialize(frame)
+        val matrix = ZxingQrEncoder().encode(encoded)
+        val luma = matrix.toLuma()
+
+        val decoded = ZxingQrImageDecoder().decodeLuma(
+            luma = luma,
+            width = matrix.modules,
+            height = matrix.modules,
+            rowStride = matrix.modules,
+            pixelStride = 1,
+            rotationDegrees = 0,
+        )
+
+        assertArrayEquals(encoded, decoded)
+    }
+
+    @Test
     fun `camera frame with surrounding preview decodes without pure barcode hint`() {
         val frame = FrameEnvelope(
             version = 1,
@@ -64,6 +93,16 @@ class ZxingQrImageDecoderTest {
         )
 
         assertArrayEquals(encoded, decoded)
+    }
+
+    private fun QrMatrix.toLuma(): ByteArray {
+        val output = ByteArray(modules * modules)
+        for (y in 0 until modules) {
+            for (x in 0 until modules) {
+                output[y * modules + x] = if (isDark(x, y)) 0 else 0xFF.toByte()
+            }
+        }
+        return output
     }
 
     private fun QrMatrix.toRgba(): ByteArray {

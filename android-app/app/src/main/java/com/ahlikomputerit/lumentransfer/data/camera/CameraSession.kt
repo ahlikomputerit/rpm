@@ -24,6 +24,11 @@ interface CameraSession {
     fun unbind()
 }
 
+enum class CameraFrameFormat {
+    RGBA_8888,
+    LUMA_8,
+}
+
 data class CameraRgbaFrame(
     val bytes: ByteArray,
     val width: Int,
@@ -31,6 +36,7 @@ data class CameraRgbaFrame(
     val rowStride: Int,
     val pixelStride: Int,
     val rotationDegrees: Int,
+    val format: CameraFrameFormat = CameraFrameFormat.RGBA_8888,
 )
 
 class CameraXSession(context: Context) : CameraSession, AutoCloseable {
@@ -57,7 +63,7 @@ class CameraXSession(context: Context) : CameraSession, AutoCloseable {
                     .build()
                     .also { it.setSurfaceProvider(previewView.surfaceProvider) }
                 val imageAnalysis = ImageAnalysis.Builder()
-                    .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                    .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
                     .setTargetResolution(Size(1280, 720))
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
@@ -106,6 +112,7 @@ class CameraXSession(context: Context) : CameraSession, AutoCloseable {
                     rowStride = plane.rowStride,
                     pixelStride = plane.pixelStride,
                     rotationDegrees = imageProxy.imageInfo.rotationDegrees,
+                    format = CameraFrameFormat.LUMA_8,
                 ),
             )
         } catch (error: Throwable) {
