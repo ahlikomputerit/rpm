@@ -63,3 +63,22 @@ Sesi receiver kedua berakhir dengan `CAMERA_UNAVAILABLE` setelah sekitar 98 deti
 Selain guard lifecycle, ukuran block sender diturunkan dari 1.024 menjadi 256 byte. Dengan Base64 URL-safe dan ZXing error correction M, estimasi matrix untuk payload wire sekitar 1.024, 512, dan 256 byte masing-masing adalah 145, 109, dan 81 modul sebelum margin layar. Frame 256-byte memberi lebih banyak piksel per modul pada jarak kamera yang sama, sehingga lebih sesuai untuk QR yang dipindai dari layar ponsel. Quiet zone encoder juga dinaikkan dari margin 2 menjadi 4 modul.
 
 Perubahan kedua ini belum dapat dinyatakan berhasil secara physical-device sampai diagnostics berikutnya menunjukkan `acceptedFrames > 0`.
+
+## Bukti uji ketiga
+
+Percobaan ketiga tetap menunjukkan pola yang sama: sesi receiver dengan 912 `qrNotFoundFrames` dari 912 rejection, 0 accepted frame, dan `CAMERA_UNAVAILABLE` setelah sekitar 113 detik. Sesi tambahan menunjukkan 321 `qrNotFoundFrames` dari 321 rejection, 0 accepted frame, dan error yang sama. Sender memancarkan 786 frame pada satu sesi dan 181 frame pada sesi lain, sehingga sender loop tetap aktif tetapi belum membuktikan bahwa QR terlihat oleh sensor receiver.
+
+Karena perbaikan decoder, block size, QR margin, dan bind guard belum mengubah `qrNotFoundFrames`, diagnosis tidak lagi boleh bergantung pada asumsi ukuran QR saja. Build berikutnya menambahkan telemetry aman untuk:
+
+| Field | Tujuan |
+|---|---|
+| `lastQrModules` | Membuktikan ukuran matrix QR yang benar-benar dirender sender. |
+| `cameraFramesAnalyzed` | Membuktikan analyzer menerima frame CameraX. |
+| `lastCameraWidth`, `lastCameraHeight` | Memeriksa resolusi actual image analysis. |
+| `lastCameraRowStride`, `lastCameraPixelStride`, `lastCameraBytes` | Memeriksa pemetaan buffer RGBA. |
+| `lastCameraRotationDegrees` | Memeriksa orientasi frame yang dianalisis. |
+| `lastCameraLumaMin`, `lastCameraLumaMax`, `lastCameraLumaMean` | Mengukur kontras global camera frame tanpa menyimpan gambar. |
+
+Decoder juga sekarang mencoba full frame, center crop 80%, center crop 60%, HybridBinarizer, GlobalHistogramBinarizer, dan pure-barcode fallback. Sender renderer memakai batas pixel integer per QR module untuk mengurangi blur pada ukuran matrix non-integer.
+
+Jika diagnostics berikutnya memiliki `cameraFramesAnalyzed = 0`, masalahnya berada pada camera binding/analyzer lifecycle. Jika `cameraFramesAnalyzed > 0` tetapi luma hampir seragam, receiver tidak melihat layar sender atau exposure/preview bermasalah. Jika luma memiliki rentang lebar dan `lastQrModules` rendah tetapi `qrNotFoundFrames` tetap tinggi, fokus berikutnya adalah format/crop/rotation image input dan bukan fountain protocol.

@@ -4,6 +4,7 @@ import com.google.zxing.BinaryBitmap
 import com.google.zxing.DecodeHintType
 import com.google.zxing.ReaderException
 import com.google.zxing.RGBLuminanceSource
+import com.google.zxing.common.GlobalHistogramBinarizer
 import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeReader
 import java.util.EnumMap
@@ -33,7 +34,7 @@ class ZxingQrImageDecoder : QrImageDecoder {
             }
         }
 
-        val normalHints = EnumMap<DecodeHintType, Any>(DecodeHintType::class.java).apply {
+        val hints = EnumMap<DecodeHintType, Any>(DecodeHintType::class.java).apply {
             put(DecodeHintType.TRY_HARDER, true)
             put(DecodeHintType.POSSIBLE_FORMATS, listOf(com.google.zxing.BarcodeFormat.QR_CODE))
         }
@@ -43,31 +44,60 @@ class ZxingQrImageDecoder : QrImageDecoder {
             put(DecodeHintType.POSSIBLE_FORMATS, listOf(com.google.zxing.BarcodeFormat.QR_CODE))
         }
 
-        // A live camera frame normally contains preview background and perspective, so use the
-        // detector first. A pure-barcode fallback preserves compatibility with cropped fixtures.
-        val text = decodeText(argb, width, height, normalHints)
-            ?: decodeText(argb, width, height, pureHints)
-            ?: return null
+        // Try the complete preview first, then center crops. A phone screen is normally centered
+        // in the receiver preview, and a crop gives the detector more pixels per QR module.
+        val candidates = listOf(
+            Crop(0, 0, width, height),
+            centeredCrop(width, height, 0.80f),
+            centeredCrop(width, height, 0.60f),
+        )
+        for (crop in candidates) {
+            for (global in listOf(false, true)) {
+                decodeText(argb, width, height, crop, hints, global)?.let { return decodeBase64(it) }
+            }
+        }
+        // Preserve compatibility with a QR bitmap that is already cropped to barcode-only input.
+        decodeText(argb, width, height, Crop(0, 0, width, height), pureHints, global = false)?.let {
+            return decodeBase64(it)
+        }
+        return null
+    }
 
+    private fun decodeText(
+        argb: IntArray,
+        sourceWidth: Int,
+        sourceHeight: Int,
+        crop: Crop,
+        hints: Map<DecodeHintType, Any>,
+        global: Boolean,
+    ): String? {
         return try {
-            java.util.Base64.getUrlDecoder().decode(text)
+            val fullSource = RGBLuminanceSource(sourceWidth, sourceHeight, argb)
+            val source = if (crop.x == 0 && crop.y == 0 && crop.width == sourceWidth && crop.height == sourceHeight) {
+                fullSource
+            } else {
+                fullSource.crop(crop.x, crop.y, crop.width, crop.height)
+            }
+            val binarizer = if (global) GlobalHistogramBinarizer(source) else HybridBinarizer(source)
+            QRCodeReader().decode(BinaryBitmap(binarizer), hints).text
+        } catch (_: ReaderException) {
+            null
         } catch (_: IllegalArgumentException) {
             null
         }
     }
 
-    private fun decodeText(
-        argb: IntArray,
-        width: Int,
-        height: Int,
-        hints: Map<DecodeHintType, Any>,
-    ): String? {
-        return try {
-            val source = RGBLuminanceSource(width, height, argb)
-            val bitmap = BinaryBitmap(HybridBinarizer(source))
-            QRCodeReader().decode(bitmap, hints).text
-        } catch (_: ReaderException) {
-            null
-        }
+    private fun decodeBase64(text: String): ByteArray? = try {
+        java.util.Base64.getUrlDecoder().decode(text)
+    } catch (_: IllegalArgumentException) {
+        null
+    }
+
+    private data class Crop(val x: Int, val y: Int, val width: Int, val height: Int)
+
+    private fun centeredCrop(width: Int, height: Int, fraction: Float): Crop {
+        val cropWidth = (width * fraction).toInt().coerceAtLeast(1)
+        val cropHeight = (height * fraction).toInt().coerceAtLeast(1)
+        return Crop((width - cropWidth) / 2, (height - cropHeight) / 2, cropWidth, cropHeight)
     }
 }

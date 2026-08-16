@@ -132,6 +132,28 @@ class ReceiveViewModel(
         }
     }
 
+    fun onCameraFrameObserved(
+        frame: com.ahlikomputerit.lumentransfer.data.camera.CameraRgbaFrame,
+        lumaMin: Int,
+        lumaMax: Int,
+        lumaMean: Int,
+    ) {
+        diagnosticsStore.dispatch(
+            DiagnosticsEvent.CameraFrameObserved(
+                width = frame.width,
+                height = frame.height,
+                rowStride = frame.rowStride,
+                pixelStride = frame.pixelStride,
+                rotationDegrees = frame.rotationDegrees,
+                bytes = frame.bytes.size,
+                lumaMin = lumaMin,
+                lumaMax = lumaMax,
+                lumaMean = lumaMean,
+                nowMs = now(),
+            ),
+        )
+    }
+
     fun onEnvelope(frame: FrameEnvelope) {
         val currentId = _uiState.value.activeTransferId
         if (currentId != null && currentId != frame.transferId) {

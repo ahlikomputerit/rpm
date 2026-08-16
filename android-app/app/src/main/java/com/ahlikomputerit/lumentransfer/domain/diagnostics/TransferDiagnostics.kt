@@ -24,6 +24,17 @@ data class TransferDiagnostics(
     val qrNotFoundFrames: Long = 0L,
     val invalidProtocolFrames: Long = 0L,
     val transferIdMismatchFrames: Long = 0L,
+    val cameraFramesAnalyzed: Long = 0L,
+    val lastCameraWidth: Int = 0,
+    val lastCameraHeight: Int = 0,
+    val lastCameraRowStride: Int = 0,
+    val lastCameraPixelStride: Int = 0,
+    val lastCameraRotationDegrees: Int = 0,
+    val lastCameraBytes: Int = 0,
+    val lastCameraLumaMin: Int = 0,
+    val lastCameraLumaMax: Int = 0,
+    val lastCameraLumaMean: Int = 0,
+    val lastQrModules: Int = 0,
     val emittedBytes: Long = 0L,
     val acceptedBytes: Long = 0L,
     val systematicFrames: Long = 0L,
@@ -58,6 +69,19 @@ sealed interface DiagnosticsEvent {
         val equationCount: Int,
         val nowMs: Long,
     ) : DiagnosticsEvent
+    data class CameraFrameObserved(
+        val width: Int,
+        val height: Int,
+        val rowStride: Int,
+        val pixelStride: Int,
+        val rotationDegrees: Int,
+        val bytes: Int,
+        val lumaMin: Int,
+        val lumaMax: Int,
+        val lumaMean: Int,
+        val nowMs: Long,
+    ) : DiagnosticsEvent
+    data class QrRendered(val modules: Int, val nowMs: Long) : DiagnosticsEvent
     data class Duplicate(val nowMs: Long) : DiagnosticsEvent
     data class Rejected(
         val nowMs: Long,
@@ -97,6 +121,19 @@ fun reduceDiagnostics(state: TransferDiagnostics, event: DiagnosticsEvent): Tran
         lastSequence = event.sequence,
         terminalPhase = TransferPhase.RECEIVING,
     )
+    is DiagnosticsEvent.CameraFrameObserved -> state.copy(
+        cameraFramesAnalyzed = state.cameraFramesAnalyzed + 1,
+        lastCameraWidth = event.width,
+        lastCameraHeight = event.height,
+        lastCameraRowStride = event.rowStride,
+        lastCameraPixelStride = event.pixelStride,
+        lastCameraRotationDegrees = event.rotationDegrees,
+        lastCameraBytes = event.bytes,
+        lastCameraLumaMin = event.lumaMin,
+        lastCameraLumaMax = event.lumaMax,
+        lastCameraLumaMean = event.lumaMean,
+    )
+    is DiagnosticsEvent.QrRendered -> state.copy(lastQrModules = event.modules)
     is DiagnosticsEvent.Duplicate -> state.copy(duplicateFrames = state.duplicateFrames + 1)
     is DiagnosticsEvent.Rejected -> state.copy(
         rejectedFrames = state.rejectedFrames + 1,

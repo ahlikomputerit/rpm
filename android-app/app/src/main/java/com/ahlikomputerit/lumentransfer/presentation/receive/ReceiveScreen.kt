@@ -68,6 +68,7 @@ fun ReceiveScreen(
             qrDecoder = qrImageDecoder,
             onEnvelope = viewModel::onEnvelope,
             onRejected = viewModel::onRejected,
+            onFrameObserved = viewModel::onCameraFrameObserved,
         )
     }
 
@@ -314,6 +315,10 @@ private fun ReceiveDiagnosticsSummaryCard(diagnostics: TransferDiagnostics) {
             Text("QR not found: ${diagnostics.qrNotFoundFrames}", style = MaterialTheme.typography.bodySmall)
             Text("Invalid protocol: ${diagnostics.invalidProtocolFrames}", style = MaterialTheme.typography.bodySmall)
             Text("Transfer ID mismatch: ${diagnostics.transferIdMismatchFrames}", style = MaterialTheme.typography.bodySmall)
+            Text(
+                "Camera frames: ${diagnostics.cameraFramesAnalyzed} · ${diagnostics.lastCameraWidth}×${diagnostics.lastCameraHeight} · stride ${diagnostics.lastCameraRowStride}/${diagnostics.lastCameraPixelStride} · rot ${diagnostics.lastCameraRotationDegrees}°",
+                style = MaterialTheme.typography.bodySmall,
+            )
             Text("Goodput: ${"%.1f".format(diagnostics.goodputBytesPerSecond)} bytes/s", style = MaterialTheme.typography.bodyMedium)
             Text("Source/recovered blocks: ${diagnostics.sourceBlocks}/${diagnostics.recoveredBlocks}", style = MaterialTheme.typography.bodyMedium)
             Text("Equations: ${diagnostics.equationCount}", style = MaterialTheme.typography.bodyMedium)

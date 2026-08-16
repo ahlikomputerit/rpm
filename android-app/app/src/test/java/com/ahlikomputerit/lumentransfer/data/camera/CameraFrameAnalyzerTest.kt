@@ -40,6 +40,25 @@ class CameraFrameAnalyzerTest {
     }
 
     @Test
+    fun `analyzer emits payload-free camera observation`() {
+        var observed: CameraRgbaFrame? = null
+        var luma = -1
+        CameraFrameAnalyzer(
+            qrDecoder = FakeDecoder(null),
+            onEnvelope = {},
+            onRejected = {},
+            onFrameObserved = { frame, _, _, mean ->
+                observed = frame
+                luma = mean
+            },
+        ).analyze(dummyFrame())
+
+        assertEquals(1, observed?.width)
+        assertEquals(1, observed?.height)
+        assertEquals(0, luma)
+    }
+
+    @Test
     fun `missing qr becomes nonfatal rejection`() {
         val rejected = mutableListOf<RejectionReason>()
         CameraFrameAnalyzer(FakeDecoder(null), {}, rejected::add).analyze(dummyFrame())

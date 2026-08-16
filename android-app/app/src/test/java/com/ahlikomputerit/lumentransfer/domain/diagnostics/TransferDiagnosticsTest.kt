@@ -48,6 +48,27 @@ class TransferDiagnosticsTest {
     }
 
     @Test
+    fun `diagnostics stores camera telemetry and qr size without payload`() {
+        var state = TransferDiagnostics(TransferRole.RECEIVE)
+        state = reduceDiagnostics(
+            state,
+            DiagnosticsEvent.CameraFrameObserved(1280, 720, 5120, 4, 90, 3_686_400, 2, 250, 120, 2),
+        )
+        state = reduceDiagnostics(state, DiagnosticsEvent.QrRendered(81, 2))
+
+        assertEquals(1L, state.cameraFramesAnalyzed)
+        assertEquals(1280, state.lastCameraWidth)
+        assertEquals(720, state.lastCameraHeight)
+        assertEquals(5120, state.lastCameraRowStride)
+        assertEquals(4, state.lastCameraPixelStride)
+        assertEquals(90, state.lastCameraRotationDegrees)
+        assertEquals(2, state.lastCameraLumaMin)
+        assertEquals(250, state.lastCameraLumaMax)
+        assertEquals(120, state.lastCameraLumaMean)
+        assertEquals(81, state.lastQrModules)
+    }
+
+    @Test
     fun `diagnostics classifies rejection reasons without payload`() {
         var state = TransferDiagnostics(TransferRole.RECEIVE)
         state = reduceDiagnostics(state, DiagnosticsEvent.Rejected(1, DiagnosticsRejection.QR_NOT_FOUND))

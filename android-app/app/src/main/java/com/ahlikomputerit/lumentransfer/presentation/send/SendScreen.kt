@@ -194,7 +194,7 @@ fun SendScreen(
                 elapsedMs = diagnostics.elapsedMs,
                 primary = "Frame emitted: ${diagnostics.emittedFrames}",
                 secondary = "Systematic/repair: ${diagnostics.systematicFrames}/${diagnostics.repairFrames}",
-                tertiary = "Bytes emitted: ${diagnostics.emittedBytes}",
+                tertiary = "Bytes emitted: ${diagnostics.emittedBytes} · QR modules: ${diagnostics.lastQrModules}",
             )
             OutlinedButton(
                 onClick = {

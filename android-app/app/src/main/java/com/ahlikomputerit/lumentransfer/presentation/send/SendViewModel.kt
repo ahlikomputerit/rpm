@@ -131,6 +131,7 @@ class SendViewModel(
                     frameNumber += 1
                     val emittedAt = System.currentTimeMillis()
                     diagnosticsStore.dispatch(DiagnosticsEvent.FrameEmitted(envelope.kind, envelope.sequence, frameBytes.size, emittedAt))
+                    diagnosticsStore.dispatch(DiagnosticsEvent.QrRendered(qr.modules, emittedAt))
                     transferStore.dispatch(TransferEvent.FrameEmitted(envelope.kind, envelope.sequence, emittedAt))
                     _uiState.update {
                         it.copy(
