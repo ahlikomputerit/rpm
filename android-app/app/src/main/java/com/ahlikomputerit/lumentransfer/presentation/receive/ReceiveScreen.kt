@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,6 +43,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.ahlikomputerit.lumentransfer.data.camera.CameraFrameAnalyzer
+import com.ahlikomputerit.lumentransfer.data.file.DiagnosticsFileWriter
 import com.ahlikomputerit.lumentransfer.data.camera.CameraXSession
 import com.ahlikomputerit.lumentransfer.data.qr.ZxingQrImageDecoder
 
@@ -53,6 +56,7 @@ fun ReceiveScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val state by viewModel.uiState.collectAsState()
+    val diagnostics by viewModel.diagnostics.collectAsState()
     val previewView = remember { PreviewView(context) }
     val cameraSession = remember { CameraXSession(context) }
     val qrImageDecoder = remember { ZxingQrImageDecoder() }
@@ -62,6 +66,11 @@ fun ReceiveScreen(
             onEnvelope = viewModel::onEnvelope,
             onRejected = viewModel::onRejected,
         )
+    }
+    val diagnosticsExporter = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        result.data?.data?.let { uri ->
+            runCatching { DiagnosticsFileWriter.write(context.contentResolver, uri, diagnostics) }
+        }
     }
     val saveLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -104,7 +113,8 @@ fun ReceiveScreen(
         },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
@@ -184,6 +194,21 @@ fun ReceiveScreen(
                     )
                 }
             }
+            ReceiveDiagnosticsSummaryCard(diagnostics)
+            OutlinedButton(
+                onClick = {
+                    diagnosticsExporter.launch(
+                        Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                            type = "application/json"
+                            putExtra(Intent.EXTRA_TITLE, "lumen-diagnostics-receive.json")
+                        },
+                    )
+                },
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Export diagnostics penerimaan sebagai JSON" },
+            ) {
+                Text("Export diagnostics")
+            }
+
             when (state.permission) {
                 CameraPermissionState.Granted -> Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -204,6 +229,21 @@ fun ReceiveScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Izinkan kamera") }
             }
+        }
+    }
+}
+
+@Composable
+private fun ReceiveDiagnosticsSummaryCard(diagnostics: com.ahlikomputerit.lumentransfer.domain.diagnostics.TransferDiagnostics) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Diagnostics", style = MaterialTheme.typography.titleMedium)
+            Text("Elapsed: ${diagnostics.elapsedMs} ms", style = MaterialTheme.typography.bodyMedium)
+            Text("Frame accepted: ${diagnostics.acceptedFrames}", style = MaterialTheme.typography.bodyMedium)
+            Text("Duplicate/rejected: ${diagnostics.duplicateFrames}/${diagnostics.rejectedFrames}", style = MaterialTheme.typography.bodyMedium)
+            Text("Goodput: ${"%.1f".format(diagnostics.goodputBytesPerSecond)} bytes/s", style = MaterialTheme.typography.bodyMedium)
+            Text("Source/recovered blocks: ${diagnostics.sourceBlocks}/${diagnostics.recoveredBlocks}", style = MaterialTheme.typography.bodyMedium)
+            Text("Equations: ${diagnostics.equationCount}", style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

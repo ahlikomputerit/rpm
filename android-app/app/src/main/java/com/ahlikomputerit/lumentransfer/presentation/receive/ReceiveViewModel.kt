@@ -1,13 +1,19 @@
 package com.ahlikomputerit.lumentransfer.presentation.receive
 
+import android.Manifest
+import android.content.ContentResolver
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.ahlikomputerit.lumentransfer.data.camera.RejectionReason
+import com.ahlikomputerit.lumentransfer.data.file.DiagnosticsFileWriter
 import com.ahlikomputerit.lumentransfer.data.file.DocumentSaver
 import com.ahlikomputerit.lumentransfer.data.file.UnavailableDocumentSaver
 import com.ahlikomputerit.lumentransfer.data.file.sanitizeDocumentName
+import com.ahlikomputerit.lumentransfer.domain.diagnostics.DiagnosticsEvent
+import com.ahlikomputerit.lumentransfer.domain.diagnostics.DiagnosticsStore
+import com.ahlikomputerit.lumentransfer.domain.diagnostics.TransferDiagnostics
 import com.ahlikomputerit.lumentransfer.domain.model.FileMetadata
 import com.ahlikomputerit.lumentransfer.domain.model.FrameEnvelope
 import com.ahlikomputerit.lumentransfer.domain.model.FrameKind
@@ -66,6 +72,7 @@ data class ReceiveUiState(
 class ReceiveViewModel(
     filesDir: File = File(System.getProperty("java.io.tmpdir"), "lumen-receive-default").apply { mkdirs() },
     private val documentSaver: DocumentSaver = UnavailableDocumentSaver,
+    private val contentResolver: ContentResolver? = null,
     private val timeoutDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ReceiveUiState())
@@ -74,6 +81,8 @@ class ReceiveViewModel(
     private val reconstructor = FountainReconstructor(filesDir)
     private val transferStore = TransferStore(TransferState(TransferRole.RECEIVE))
     val transferState: StateFlow<TransferState> = transferStore.state
+    private val diagnosticsStore = DiagnosticsStore(TransferRole.RECEIVE)
+    val diagnostics: StateFlow<TransferDiagnostics> = diagnosticsStore.snapshot
     private val timeoutScope = CoroutineScope(SupervisorJob() + timeoutDispatcher)
     private var timeoutJob: Job? = null
 
@@ -95,19 +104,25 @@ class ReceiveViewModel(
         }
         if (!granted) {
             timeoutJob?.cancel()
-            transferStore.dispatch(TransferEvent.Failed(TransferError.CAMERA_PERMISSION_DENIED, "Permission kamera belum diberikan", now()))
+            val failedAt = now()
+            diagnosticsStore.dispatch(DiagnosticsEvent.Failed(TransferError.CAMERA_PERMISSION_DENIED, failedAt))
+            transferStore.dispatch(TransferEvent.Failed(TransferError.CAMERA_PERMISSION_DENIED, "Permission kamera belum diberikan", failedAt))
         }
     }
 
     fun onCameraStarted() {
+        val startedAt = now()
+        diagnosticsStore.dispatch(DiagnosticsEvent.Started(startedAt))
         _uiState.update { it.copy(isScanning = true, message = "Scanning QR frame…") }
-        transferStore.dispatch(TransferEvent.ReceiverStarted(now(), SESSION_TIMEOUT_MS))
+        transferStore.dispatch(TransferEvent.ReceiverStarted(startedAt, SESSION_TIMEOUT_MS))
         startTimeoutWatch()
     }
 
     fun onCameraError(error: Throwable) {
         timeoutJob?.cancel()
-        transferStore.dispatch(TransferEvent.Failed(TransferError.CAMERA_UNAVAILABLE, error.message ?: "Camera unavailable", now()))
+        val failedAt = now()
+        diagnosticsStore.dispatch(DiagnosticsEvent.Failed(TransferError.CAMERA_UNAVAILABLE, failedAt))
+        transferStore.dispatch(TransferEvent.Failed(TransferError.CAMERA_UNAVAILABLE, error.message ?: "Camera unavailable", failedAt))
         _uiState.update {
             it.copy(
                 isScanning = false,
@@ -160,7 +175,9 @@ class ReceiveViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { documentSaver.save(source, uri) }
                 .onSuccess {
-                    transferStore.dispatch(TransferEvent.Saved(now()))
+                    val completedAt = now()
+                    diagnosticsStore.dispatch(DiagnosticsEvent.Completed(completedAt))
+                    transferStore.dispatch(TransferEvent.Saved(completedAt))
                     _uiState.update {
                         it.copy(
                             message = "File berhasil disimpan.",
@@ -170,7 +187,9 @@ class ReceiveViewModel(
                     reconstructor.cleanup()
                 }
                 .onFailure { error ->
-                    transferStore.dispatch(TransferEvent.Failed(TransferError.STORAGE_WRITE_FAILED, error.message ?: "Gagal menyimpan file", now()))
+                    val failedAt = now()
+                    diagnosticsStore.dispatch(DiagnosticsEvent.Failed(TransferError.STORAGE_WRITE_FAILED, failedAt))
+                    transferStore.dispatch(TransferEvent.Failed(TransferError.STORAGE_WRITE_FAILED, error.message ?: "Gagal menyimpan file", failedAt))
                     _uiState.update {
                         it.copy(reconstruction = ReconstructionState.Failed(error.message ?: "Gagal menyimpan file"))
                     }
@@ -179,6 +198,11 @@ class ReceiveViewModel(
     }
 
     fun onRejected(reason: RejectionReason) {
+        val diagnosticEvent = when (reason) {
+            RejectionReason.DUPLICATE_FRAME -> DiagnosticsEvent.Duplicate(now())
+            else -> DiagnosticsEvent.Rejected(now())
+        }
+        diagnosticsStore.dispatch(diagnosticEvent)
         _uiState.update {
             when (reason) {
                 RejectionReason.DUPLICATE_FRAME -> it.copy(duplicateFrames = it.duplicateFrames + 1)
@@ -196,13 +220,17 @@ class ReceiveViewModel(
         timeoutJob?.cancel()
         acceptedKeys.clear()
         reconstructor.cleanup()
-        transferStore.dispatch(TransferEvent.Reset(now()))
+        val resetAt = now()
+        diagnosticsStore.dispatch(DiagnosticsEvent.Reset(resetAt))
+        transferStore.dispatch(TransferEvent.Reset(resetAt))
         _uiState.value = ReceiveUiState(permission = _uiState.value.permission)
     }
 
     fun cancelSession() {
         timeoutJob?.cancel()
-        transferStore.dispatch(TransferEvent.Cancelled(now()))
+        val cancelledAt = now()
+        diagnosticsStore.dispatch(DiagnosticsEvent.Cancelled(cancelledAt))
+        transferStore.dispatch(TransferEvent.Cancelled(cancelledAt))
         acceptedKeys.clear()
         reconstructor.cleanup()
         _uiState.update { it.copy(isScanning = false, reconstruction = ReconstructionState.Failed("SESSION_CANCELLED")) }
@@ -210,6 +238,17 @@ class ReceiveViewModel(
 
     fun onRotationChanged(degrees: Int) {
         transferStore.dispatch(TransferEvent.RotationChanged(degrees, now()))
+    }
+
+    fun saveDiagnostics(uri: Uri) {
+        val resolver = contentResolver ?: return
+        val snapshot = diagnostics.value
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { DiagnosticsFileWriter.write(resolver, uri, snapshot) }
+                .onFailure { error ->
+                    _uiState.update { it.copy(message = "Gagal menyimpan diagnostics: ${error.message ?: "unknown error"}") }
+                }
+        }
     }
 
     override fun onCleared() {
@@ -220,12 +259,12 @@ class ReceiveViewModel(
     }
 
     companion object {
-        fun factory(filesDir: File, documentSaver: DocumentSaver): ViewModelProvider.Factory =
+        fun factory(filesDir: File, documentSaver: DocumentSaver, contentResolver: ContentResolver? = null): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     require(modelClass.isAssignableFrom(ReceiveViewModel::class.java))
-                    return ReceiveViewModel(filesDir, documentSaver) as T
+                    return ReceiveViewModel(filesDir, documentSaver, contentResolver) as T
                 }
             }
 
@@ -238,6 +277,17 @@ class ReceiveViewModel(
         metadata: FileMetadata?,
     ) {
         val progress = (reconstruction as? ReconstructionState.Receiving)?.progress
+        diagnosticsStore.dispatch(
+            DiagnosticsEvent.FrameAccepted(
+                kind = frame.kind,
+                sequence = frame.sequence,
+                bytes = frame.payload.size,
+                sourceBlocks = progress?.totalBlocks ?: metadata?.sourceBlockCount ?: 0,
+                recoveredBlocks = progress?.recoveredBlocks ?: 0,
+                equationCount = progress?.equationCount ?: 0,
+                nowMs = now(),
+            ),
+        )
         transferStore.dispatch(
             TransferEvent.FrameAccepted(
                 transferId = frame.transferId,
@@ -281,7 +331,9 @@ class ReceiveViewModel(
                 )
             }
         } else {
-            transferStore.dispatch(TransferEvent.Failed(TransferError.INTEGRITY_MISMATCH, "Checksum tidak cocok", now()))
+            val failedAt = now()
+            diagnosticsStore.dispatch(DiagnosticsEvent.Failed(TransferError.INTEGRITY_MISMATCH, failedAt))
+            transferStore.dispatch(TransferEvent.Failed(TransferError.INTEGRITY_MISMATCH, "Checksum tidak cocok", failedAt))
             _uiState.update {
                 it.copy(
                     message = "Checksum tidak cocok. Hasil sementara dibuang.",
@@ -297,7 +349,9 @@ class ReceiveViewModel(
             delay(SESSION_TIMEOUT_MS)
             val state = transferState.value
             if (state.phase == TransferPhase.SCANNING || state.phase == TransferPhase.RECEIVING) {
-                transferStore.dispatch(TransferEvent.Timeout(now()))
+                val timeoutAt = now()
+                diagnosticsStore.dispatch(DiagnosticsEvent.Failed(TransferError.DECODER_STALLED, timeoutAt))
+                transferStore.dispatch(TransferEvent.Timeout(timeoutAt))
                 _uiState.update { it.copy(isScanning = false, message = "Transfer timeout karena tidak ada frame baru") }
             }
         }

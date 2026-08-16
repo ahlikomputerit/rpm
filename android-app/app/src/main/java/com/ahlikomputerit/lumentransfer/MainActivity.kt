@@ -14,7 +14,7 @@ class MainActivity : ComponentActivity() {
         SendViewModel.factory(contentResolver, WindowScreenOnPolicy(window))
     }
     private val receiveViewModel by viewModels<ReceiveViewModel> {
-        ReceiveViewModel.factory(filesDir, AndroidDocumentSaver(contentResolver))
+        ReceiveViewModel.factory(filesDir, AndroidDocumentSaver(contentResolver), contentResolver)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -1,0 +1,93 @@
+package com.ahlikomputerit.lumentransfer.domain.diagnostics
+
+import com.ahlikomputerit.lumentransfer.domain.model.FrameKind
+import com.ahlikomputerit.lumentransfer.domain.model.TransferError
+import com.ahlikomputerit.lumentransfer.domain.state.TransferPhase
+import com.ahlikomputerit.lumentransfer.domain.state.TransferRole
+
+/** Immutable, payload-free diagnostic snapshot for a single transfer session. */
+data class TransferDiagnostics(
+    val role: TransferRole,
+    val startedAtMs: Long? = null,
+    val endedAtMs: Long? = null,
+    val emittedFrames: Long = 0L,
+    val acceptedFrames: Long = 0L,
+    val duplicateFrames: Long = 0L,
+    val rejectedFrames: Long = 0L,
+    val emittedBytes: Long = 0L,
+    val acceptedBytes: Long = 0L,
+    val systematicFrames: Long = 0L,
+    val repairFrames: Long = 0L,
+    val sourceBlocks: Int = 0,
+    val recoveredBlocks: Int = 0,
+    val equationCount: Int = 0,
+    val lastSequence: Long? = null,
+    val terminalPhase: String = TransferPhase.IDLE,
+    val error: TransferError? = null,
+) {
+    val elapsedMs: Long
+        get() = when {
+            startedAtMs == null -> 0L
+            endedAtMs != null -> (endedAtMs - startedAtMs).coerceAtLeast(0L)
+            else -> 0L
+        }
+
+    val goodputBytesPerSecond: Double
+        get() = if (elapsedMs <= 0L) 0.0 else acceptedBytes * 1_000.0 / elapsedMs
+}
+
+sealed interface DiagnosticsEvent {
+    data class Started(val nowMs: Long) : DiagnosticsEvent
+    data class FrameEmitted(val kind: FrameKind, val sequence: Long, val bytes: Int, val nowMs: Long) : DiagnosticsEvent
+    data class FrameAccepted(
+        val kind: FrameKind,
+        val sequence: Long,
+        val bytes: Int,
+        val sourceBlocks: Int,
+        val recoveredBlocks: Int,
+        val equationCount: Int,
+        val nowMs: Long,
+    ) : DiagnosticsEvent
+    data class Duplicate(val nowMs: Long) : DiagnosticsEvent
+    data class Rejected(val nowMs: Long) : DiagnosticsEvent
+    data class Completed(val nowMs: Long) : DiagnosticsEvent
+    data class Failed(val error: TransferError, val nowMs: Long) : DiagnosticsEvent
+    data class Cancelled(val nowMs: Long) : DiagnosticsEvent
+    data class Reset(val nowMs: Long) : DiagnosticsEvent
+}
+
+fun reduceDiagnostics(state: TransferDiagnostics, event: DiagnosticsEvent): TransferDiagnostics = when (event) {
+    is DiagnosticsEvent.Started -> state.copy(
+        startedAtMs = event.nowMs,
+        endedAtMs = null,
+        terminalPhase = when (state.role) {
+            TransferRole.SEND -> TransferPhase.SENDING
+            TransferRole.RECEIVE -> TransferPhase.SCANNING
+        },
+        error = null,
+    )
+    is DiagnosticsEvent.FrameEmitted -> state.copy(
+        emittedFrames = state.emittedFrames + 1,
+        emittedBytes = state.emittedBytes + event.bytes,
+        systematicFrames = state.systematicFrames + if (event.kind == FrameKind.SYSTEMATIC_DATA) 1 else 0,
+        repairFrames = state.repairFrames + if (event.kind == FrameKind.REPAIR_DATA) 1 else 0,
+        lastSequence = event.sequence,
+    )
+    is DiagnosticsEvent.FrameAccepted -> state.copy(
+        acceptedFrames = state.acceptedFrames + 1,
+        acceptedBytes = state.acceptedBytes + event.bytes,
+        systematicFrames = state.systematicFrames + if (event.kind == FrameKind.SYSTEMATIC_DATA) 1 else 0,
+        repairFrames = state.repairFrames + if (event.kind == FrameKind.REPAIR_DATA) 1 else 0,
+        sourceBlocks = event.sourceBlocks,
+        recoveredBlocks = event.recoveredBlocks,
+        equationCount = event.equationCount,
+        lastSequence = event.sequence,
+        terminalPhase = TransferPhase.RECEIVING,
+    )
+    is DiagnosticsEvent.Duplicate -> state.copy(duplicateFrames = state.duplicateFrames + 1)
+    is DiagnosticsEvent.Rejected -> state.copy(rejectedFrames = state.rejectedFrames + 1)
+    is DiagnosticsEvent.Completed -> state.copy(endedAtMs = event.nowMs, terminalPhase = TransferPhase.SAVED)
+    is DiagnosticsEvent.Failed -> state.copy(endedAtMs = event.nowMs, terminalPhase = TransferPhase.FAILED, error = event.error)
+    is DiagnosticsEvent.Cancelled -> state.copy(endedAtMs = event.nowMs, terminalPhase = TransferPhase.CANCELLED, error = TransferError.SESSION_CANCELLED)
+    is DiagnosticsEvent.Reset -> TransferDiagnostics(role = state.role)
+}

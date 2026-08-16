@@ -6,12 +6,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.ahlikomputerit.lumentransfer.data.file.AndroidDocumentReader
+import com.ahlikomputerit.lumentransfer.data.file.DiagnosticsFileWriter
 import com.ahlikomputerit.lumentransfer.data.qr.QrMatrix
 import com.ahlikomputerit.lumentransfer.data.qr.ZxingQrEncoder
 import com.ahlikomputerit.lumentransfer.domain.model.FrameEnvelope
 import com.ahlikomputerit.lumentransfer.domain.model.FrameKind
 import com.ahlikomputerit.lumentransfer.domain.protocol.FountainFrameSource
 import com.ahlikomputerit.lumentransfer.domain.protocol.FrameSerializer
+import com.ahlikomputerit.lumentransfer.domain.diagnostics.DiagnosticsEvent
+import com.ahlikomputerit.lumentransfer.domain.diagnostics.DiagnosticsStore
+import com.ahlikomputerit.lumentransfer.domain.diagnostics.TransferDiagnostics
 import com.ahlikomputerit.lumentransfer.domain.model.TransferError
 import com.ahlikomputerit.lumentransfer.domain.runtime.NoOpScreenOnPolicy
 import com.ahlikomputerit.lumentransfer.domain.runtime.ScreenOnPolicy
@@ -51,7 +55,7 @@ data class SendUiState(
 )
 
 class SendViewModel(
-    contentResolver: ContentResolver,
+    private val contentResolver: ContentResolver,
     private val screenOnPolicy: ScreenOnPolicy = NoOpScreenOnPolicy(),
 ) : ViewModel() {
     private val reader = AndroidDocumentReader(contentResolver)
@@ -60,6 +64,8 @@ class SendViewModel(
     val uiState: StateFlow<SendUiState> = _uiState.asStateFlow()
     private val transferStore = TransferStore(TransferState(TransferRole.SEND))
     val transferState: StateFlow<TransferState> = transferStore.state
+    private val diagnosticsStore = DiagnosticsStore(TransferRole.SEND)
+    val diagnostics: StateFlow<TransferDiagnostics> = diagnosticsStore.snapshot
 
     private var senderJob: Job? = null
     private var frameSource: FountainFrameSource? = null
@@ -105,6 +111,7 @@ class SendViewModel(
 
         screenOnPolicy.acquire()
         val now = System.currentTimeMillis()
+        diagnosticsStore.dispatch(DiagnosticsEvent.Started(now))
         if (transferState.value.phase == TransferPhase.PAUSED) {
             transferStore.dispatch(TransferEvent.SenderResumed(now, SESSION_TIMEOUT_MS))
         } else {
@@ -119,9 +126,12 @@ class SendViewModel(
                 }.also { frameSource = it }
                 while (true) {
                     val envelope = source.nextEnvelope()
-                    val qr = qrEncoder.encode(FrameSerializer.serialize(envelope))
+                    val frameBytes = FrameSerializer.serialize(envelope)
+                    val qr = qrEncoder.encode(frameBytes)
                     frameNumber += 1
-                    transferStore.dispatch(TransferEvent.FrameEmitted(envelope.kind, envelope.sequence, System.currentTimeMillis()))
+                    val emittedAt = System.currentTimeMillis()
+                    diagnosticsStore.dispatch(DiagnosticsEvent.FrameEmitted(envelope.kind, envelope.sequence, frameBytes.size, emittedAt))
+                    transferStore.dispatch(TransferEvent.FrameEmitted(envelope.kind, envelope.sequence, emittedAt))
                     _uiState.update {
                         it.copy(
                             qrPreview = qr,
@@ -134,7 +144,9 @@ class SendViewModel(
             } catch (_: CancellationException) {
                 // Pause/cancel is an expected lifecycle event.
             } catch (error: Throwable) {
-                transferStore.dispatch(TransferEvent.Failed(TransferError.FILE_UNREADABLE, error.message ?: "Sender failed", System.currentTimeMillis()))
+                val failedAt = System.currentTimeMillis()
+                diagnosticsStore.dispatch(DiagnosticsEvent.Failed(TransferError.FILE_UNREADABLE, failedAt))
+                transferStore.dispatch(TransferEvent.Failed(TransferError.FILE_UNREADABLE, error.message ?: "Sender failed", failedAt))
                 _uiState.update {
                     it.copy(senderStatus = SenderStatus.Idle, status = SendStatus.Failed(error.message ?: "Sender failed"))
                 }
@@ -162,7 +174,9 @@ class SendViewModel(
         senderJob?.cancel()
         senderJob = null
         if (transferState.value.phase !in setOf(TransferPhase.IDLE, TransferPhase.CANCELLED, TransferPhase.SAVED)) {
-            transferStore.dispatch(TransferEvent.Cancelled(System.currentTimeMillis()))
+            val cancelledAt = System.currentTimeMillis()
+            diagnosticsStore.dispatch(DiagnosticsEvent.Cancelled(cancelledAt))
+            transferStore.dispatch(TransferEvent.Cancelled(cancelledAt))
         }
         frameSource?.close()
         frameSource = null
@@ -172,12 +186,24 @@ class SendViewModel(
 
     fun clearSelection() {
         cancelSending()
-        transferStore.dispatch(TransferEvent.Reset(System.currentTimeMillis()))
+        val resetAt = System.currentTimeMillis()
+        diagnosticsStore.dispatch(DiagnosticsEvent.Reset(resetAt))
+        transferStore.dispatch(TransferEvent.Reset(resetAt))
         _uiState.value = SendUiState()
     }
 
     fun onRotationChanged(degrees: Int) {
         transferStore.dispatch(TransferEvent.RotationChanged(degrees, System.currentTimeMillis()))
+    }
+
+    fun saveDiagnostics(uri: Uri) {
+        val snapshot = diagnostics.value
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { DiagnosticsFileWriter.write(contentResolver, uri, snapshot) }
+                .onFailure { error ->
+                    _uiState.update { it.copy(status = SendStatus.Failed("Gagal menyimpan diagnostics: ${error.message ?: "unknown error"}")) }
+                }
+        }
     }
 
     override fun onCleared() {

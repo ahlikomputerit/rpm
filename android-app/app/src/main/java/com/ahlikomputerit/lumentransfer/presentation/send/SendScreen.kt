@@ -1,5 +1,6 @@
 package com.ahlikomputerit.lumentransfer.presentation.send
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +26,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
+import com.ahlikomputerit.lumentransfer.data.file.DiagnosticsFileWriter
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -37,8 +40,15 @@ fun SendScreen(
     onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val diagnostics by viewModel.diagnostics.collectAsState()
+    val context = LocalContext.current
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let(viewModel::onFileSelected)
+    }
+    val diagnosticsExporter = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        result.data?.data?.let { uri ->
+            runCatching { DiagnosticsFileWriter.write(context.contentResolver, uri, diagnostics) }
+        }
     }
 
     Scaffold(
@@ -134,6 +144,45 @@ fun SendScreen(
                     Text("Hapus pilihan")
                 }
             }
+
+            DiagnosticsSummaryCard(
+                elapsedMs = diagnostics.elapsedMs,
+                primary = "Frame emitted: ${diagnostics.emittedFrames}",
+                secondary = "Systematic/repair: ${diagnostics.systematicFrames}/${diagnostics.repairFrames}",
+                tertiary = "Bytes emitted: ${diagnostics.emittedBytes}",
+            )
+            OutlinedButton(
+                onClick = {
+                    diagnosticsExporter.launch(
+                        Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                            type = "application/json"
+                            putExtra(Intent.EXTRA_TITLE, "lumen-diagnostics-send.json")
+                        },
+                    )
+                },
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Export diagnostics pengiriman sebagai JSON" },
+            ) {
+                Text("Export diagnostics")
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiagnosticsSummaryCard(
+    elapsedMs: Long,
+    primary: String,
+    secondary: String,
+    tertiary: String,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Diagnostics", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text("Elapsed: ${elapsedMs} ms", style = MaterialTheme.typography.bodyMedium)
+            Text(primary, style = MaterialTheme.typography.bodyMedium)
+            Text(secondary, style = MaterialTheme.typography.bodyMedium)
+            Text(tertiary, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

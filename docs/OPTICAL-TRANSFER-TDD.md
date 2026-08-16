@@ -1,6 +1,6 @@
 # Lumen Transfer — Technical Design Document
 
-**Status:** Draft implementable  
+**Status:** Implemented through milestone #21; #22–#24 pending
 **Versi:** 1.0  
 **PRD:** [`docs/OPTICAL-TRANSFER-PRD.md`](./OPTICAL-TRANSFER-PRD.md)  
 **Issue blueprint:** [`docs/OPTICAL-TRANSFER-ISSUES.md`](./OPTICAL-TRANSFER-ISSUES.md)  
@@ -374,7 +374,7 @@ Perangkat nyata wajib menguji camera focus, orientation, brightness, screen refr
 
 MVP harus menggunakan budget yang dapat diukur, bukan klaim kecepatan tetap. Target awal yang direkomendasikan adalah analyzer tidak menahan satu `ImageProxy` lebih lama dari satu interval frame kamera pada kondisi normal, UI frame tidak drop parah karena decode, dan memory temp buffer tetap bounded untuk file 10 MB.
 
-Diagnostics mencatat `transferDurationMs`, `fileBytes`, `uniqueFrames`, `decodedFrames`, `rejectedFrames`, `duplicateFrames`, `frameIntervalMs`, `sourceBlockCount`, `recoveredBlockCount`, `goodputBytesPerSecond`, dan `sha256Match`. Tidak ada nilai diagnostik yang boleh berisi payload atau secret.
+Diagnostics diimplementasikan sebagai model immutable dan reducer pure. Snapshot mencatat `startedAtMs`, `endedAtMs`, `emittedFrames`, `acceptedFrames`, `duplicateFrames`, `rejectedFrames`, `emittedBytes`, `acceptedBytes`, `systematicFrames`, `repairFrames`, `sourceBlocks`, `recoveredBlocks`, `equationCount`, `lastSequence`, `terminalPhase`, dan error code. `elapsedMs` dan `goodputBytesPerSecond` dihitung dari snapshot, kemudian snapshot dapat diekspor sebagai JSON melalui `ACTION_CREATE_DOCUMENT`. Tidak ada nilai diagnostik yang boleh berisi payload, isi file, QR bytes, atau secret.
 
 ## 16. Security and privacy review
 
@@ -392,7 +392,8 @@ Urutan implementasi mengikuti issue yang telah dibuat di GitHub, yaitu #13 sampa
 | Protocol | #14–#15 | Envelope, checksum, QR dependency spike. |
 | Vertical slice | #16–#18 | Sequential sender → camera receiver → reconstructed file. |
 | Reliability | #19–#20 | Fountain code, state machine, cancellation. |
-| Hardening | #21–#22 | Diagnostics, accessibility, privacy, screen-on. |
+| Hardening | #21 | Diagnostics lokal, counters, throughput, dan JSON export tanpa payload. **Selesai.** |
+| Hardening | #22 | Accessibility, privacy notice, dark/landscape layout, brightness guidance, screen-on, dan accessible errors. |
 | Release | #23–#24 | Physical device QA, documentation, AI Studio handoff. |
 
 Setiap fase harus menghasilkan software yang dapat dikompilasi. Jangan menggabungkan seluruh encoder, camera pipeline, fountain decoder, dan UI dalam satu prompt besar tanpa checkpoint karena kegagalan dependency atau lifecycle akan sulit diisolasi.
@@ -439,7 +440,7 @@ Prompt lanjutan harus diberikan satu per satu setelah checkpoint build hijau.
 | #18 | Selesai pada checkpoint reconstruction: metadata decoder, bounded sequential temp reconstruction, out-of-order block writes, SHA-256 verification, Unicode filename sanitization, ACTION_CREATE_DOCUMENT save flow, dan cleanup setelah save/failure. Fountain repair frames dan physical-device E2E masih terbuka. |
 | #19 | Selesai pada checkpoint fountain: systematic + repair frames, deterministic seed/index selection, incremental GF(2) pivot decoder, dropped/duplicate/out-of-order tests, bounded sender store, dan ADR [`docs/ADR-FOUNTAIN-CODEC.md`](./ADR-FOUNTAIN-CODEC.md). Physical-device recovery-rate benchmark tetap terbuka. |
 | #20 | Selesai pada checkpoint state machine: immutable `TransferState`, pure reducer, `TransferStore`, sender/receiver event wiring, cancellation, timeout watchdog, rotation events, error transitions, and cleanup tests. Physical-device lifecycle QA tetap terbuka. |
-| #21 | “Add local diagnostics without payload logging: timing, unique/duplicate/rejected frames, goodput, source/recovered blocks, and a device benchmark export.” |
+| #21 | Selesai pada checkpoint diagnostics: immutable payload-free model/reducer/store, sender/receiver event wiring, timing/counters/goodput, JSON export melalui SAF, dan unit tests. Physical-device benchmark tetap terbuka pada #23. |
 | #22 | “Add privacy notice, screen-reader semantics, dark/landscape layout, brightness/distance guidance, screen-on cleanup, and accessible error states.” |
 | #23 | “Prepare a physical-device QA checklist and release candidate. Test with Wi-Fi, Bluetooth, and mobile data disabled after installation.” |
 | #24 | “Write the final Android README, AI Studio ZIP handoff guide, Android Studio import steps, device test guide, troubleshooting, known limitations, and privacy statement.” |
