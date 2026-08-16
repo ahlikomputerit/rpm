@@ -30,3 +30,13 @@ Temuan Storage Access Framework:
 - ACTION_OPEN_DOCUMENT cocok untuk memilih file sumber, sedangkan ACTION_CREATE_DOCUMENT cocok untuk menyimpan hasil dengan nama dan MIME type.
 - Aplikasi memperoleh akses melalui URI yang dipilih pengguna; implementasi harus membaca/menulis melalui ContentResolver dan tidak mengasumsikan path filesystem biasa.
 - Implikasi desain: sender memakai ActivityResultContracts.OpenDocument atau ACTION_OPEN_DOCUMENT; receiver memakai CreateDocument atau ACTION_CREATE_DOCUMENT; temp reconstruction memakai app-specific storage dan dibersihkan setelah sesi selesai.
+
+## QR codec spike — 2026-08-16
+
+Kandidat utama adalah `com.google.zxing:core:3.5.4`. Sumber resmi ZXing menyatakan library ini adalah pemroses barcode 1D/2D berbasis Java, mendukung QR Code, dan berlisensi Apache-2.0. Maven Central mencantumkan artifact `core:3.5.4` tanpa dependency runtime tambahan selain Java platform; API ini menyediakan jalur encode dan decode yang sesuai untuk adapter Android-free.
+
+Kandidat pembanding adalah `io.github.g0dkar:qrcode-kotlin:4.5.0`. Repositori resminya menyatakan library ini pure Kotlin, ringan, tanpa dependency tambahan, mendukung Android/JVM/KMP, dan berlisensi MIT. Namun fokus API publiknya adalah generator QR; decoder QR tidak tersedia sebagai pasangan yang setara untuk receiver.
+
+Keputusan sementara: gunakan ZXing Core 3.5.4 sebagai codec dua arah untuk MVP karena satu artifact dapat menjadi encoder dan decoder, tidak membutuhkan NDK/native C++, dan berlisensi Apache-2.0. Risiko keputusan ini adalah upstream ZXing berada dalam maintenance mode, sehingga integrasi harus dibatasi melalui interface `QrEncoder`/`QrDecoder` agar dapat diganti jika physical-device benchmark tidak memenuhi target.
+
+Referensi: https://github.com/zxing/zxing, https://central.sonatype.com/artifact/com.google.zxing/core, https://github.com/g0dkar/qrcode-kotlin, https://central.sonatype.com/artifact/io.github.g0dkar/qrcode-kotlin-jvm

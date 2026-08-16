@@ -1,25 +1,25 @@
 package com.ahlikomputerit.lumentransfer.data.qr
 
 /**
- * Dependency boundary for a JVM/Kotlin-compatible QR implementation.
- * The production codec is intentionally deferred until the library spike
- * verifies payload capacity, license, and physical-device decode rate.
+ * QR boundary used by sender and receiver. The domain only sees a matrix,
+ * while ZXing and future CameraX adapters remain behind this interface.
  */
 interface QrEncoder {
     fun encode(payload: ByteArray): QrMatrix
 }
 
 interface QrDecoder {
-    fun decode(frame: ByteArray): ByteArray?
+    fun decode(matrix: QrMatrix): ByteArray?
 }
 
-data class QrMatrix(val modules: Int, val darkModules: BooleanArray)
+data class QrMatrix(
+    val modules: Int,
+    val darkModules: BooleanArray,
+) {
+    init {
+        require(modules > 0) { "QR matrix size must be positive" }
+        require(darkModules.size == modules * modules) { "QR matrix must be square" }
+    }
 
-class PlaceholderQrEncoder : QrEncoder {
-    override fun encode(payload: ByteArray): QrMatrix =
-        QrMatrix(modules = 0, darkModules = BooleanArray(0))
-}
-
-class PlaceholderQrDecoder : QrDecoder {
-    override fun decode(frame: ByteArray): ByteArray? = null
+    fun isDark(x: Int, y: Int): Boolean = darkModules[y * modules + x]
 }

@@ -16,6 +16,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -75,17 +76,61 @@ fun SendScreen(
                         Text("Membaca metadata dan menghitung SHA-256…")
                     }
                 }
-                SendStatus.Ready -> state.selected?.let { selected ->
-                    InfoCard(
-                        title = selected.metadata.fileName,
-                        body = "${selected.metadata.mimeType} · ${selected.metadata.sizeBytes} bytes\nSHA-256: ${selected.metadata.sha256.toHex()}",
-                    )
+                SendStatus.Ready -> {
+                    state.selected?.let { selected ->
+                        InfoCard(
+                            title = selected.metadata.fileName,
+                            body = "${selected.metadata.mimeType} · ${selected.metadata.sizeBytes} bytes\nSHA-256: ${selected.metadata.sha256.toHex()}",
+                        )
+                    }
+                    state.qrPreview?.let { preview ->
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("Preview frame QR", style = MaterialTheme.typography.titleMedium)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                QrMatrixCanvas(preview)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "Ini adalah satu frame protocol untuk validasi encoder. Loop pengiriman dan scheduler akan ditambahkan pada tahap sender berikutnya.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        }
+                    }
                 }
                 is SendStatus.Failed -> InfoCard("Tidak dapat membaca file", status.message)
             }
 
             if (state.selected != null) {
-                Button(onClick = viewModel::clearSelection, modifier = Modifier.fillMaxWidth()) {
+                when (val sender = state.senderStatus) {
+                    SenderStatus.Idle -> Button(
+                        onClick = viewModel::startSending,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Mulai loop QR") }
+                    is SenderStatus.Running -> {
+                        Text("Frame ${sender.frameNumber} · ${sender.kind}", style = MaterialTheme.typography.bodySmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(onClick = viewModel::pauseSending, modifier = Modifier.weight(1f)) {
+                                Text("Pause")
+                            }
+                            OutlinedButton(onClick = viewModel::cancelSending, modifier = Modifier.weight(1f)) {
+                                Text("Stop")
+                            }
+                        }
+                    }
+                    is SenderStatus.Paused -> {
+                        Text("Paused pada frame ${sender.frameNumber}", style = MaterialTheme.typography.bodySmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                            Button(onClick = viewModel::startSending, modifier = Modifier.weight(1f)) {
+                                Text("Lanjutkan")
+                            }
+                            OutlinedButton(onClick = viewModel::cancelSending, modifier = Modifier.weight(1f)) {
+                                Text("Stop")
+                            }
+                        }
+                    }
+                }
+                OutlinedButton(onClick = viewModel::clearSelection, modifier = Modifier.fillMaxWidth()) {
                     Text("Hapus pilihan")
                 }
             }

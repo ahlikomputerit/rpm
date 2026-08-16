@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import com.ahlikomputerit.lumentransfer.domain.integrity.Sha256Hasher
 import com.ahlikomputerit.lumentransfer.domain.model.FileMetadata
 import com.ahlikomputerit.lumentransfer.domain.model.TransferId
+import java.io.ByteArrayOutputStream
 import java.util.UUID
 
 class AndroidDocumentReader(private val contentResolver: ContentResolver) {
@@ -33,6 +34,24 @@ class AndroidDocumentReader(private val contentResolver: ContentResolver) {
                 sourceBlockCount = blocks,
             ),
         )
+    }
+
+    fun open(uri: Uri) = contentResolver.openInputStream(uri)
+        ?: error("Unable to open selected document")
+
+    fun readPrefix(uri: Uri, maxBytes: Int): ByteArray {
+        require(maxBytes > 0) { "Prefix size must be positive" }
+        val output = ByteArrayOutputStream(maxBytes)
+        open(uri).use { input ->
+            val buffer = ByteArray(minOf(16 * 1024, maxBytes))
+            while (output.size() < maxBytes) {
+                val requested = minOf(buffer.size, maxBytes - output.size())
+                val read = input.read(buffer, 0, requested)
+                if (read < 0) break
+                if (read > 0) output.write(buffer, 0, read)
+            }
+        } ?: error("Unable to open selected document")
+        return output.toByteArray()
     }
 
     private fun queryMetadata(uri: Uri): Triple<String, Long, String> {

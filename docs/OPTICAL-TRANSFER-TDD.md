@@ -326,7 +326,7 @@ Dependency harus dijaga kecil dan kompatibel dengan AI Studio. AI Studio dapat m
 | Lifecycle/state | AndroidX Lifecycle, ViewModel, Kotlin coroutines | Wajib. |
 | Camera | CameraX Preview + ImageAnalysis | Wajib untuk receiver. |
 | File picker | AndroidX Activity Result Contracts atau intents SAF | Wajib. |
-| QR encoder/decoder | JVM-compatible library dengan API stabil | Spike Issue 03 sebelum final. |
+| QR encoder/decoder | `com.google.zxing:core:3.5.4` melalui `QrEncoder`/`QrDecoder` | Dipilih pada spike Issue #15; provisional sampai physical-device benchmark. ADR: [`docs/ADR-QR-CODEC.md`](./ADR-QR-CODEC.md). |
 | Hash | `MessageDigest` SHA-256 dari platform | Hindari dependency tambahan. |
 | Serialization | Custom binary serializer atau minimal Kotlin serialization | Custom binary lebih terkontrol untuk QR budget. |
 | Persistence | App-specific files + optional DataStore untuk settings | Database tidak diperlukan untuk MVP. |
@@ -433,7 +433,7 @@ Prompt lanjutan harus diberikan satu per satu setelah checkpoint build hijau.
 | Issue | Prompt lanjutan |
 |---:|---|
 | #14 | “Implement the binary FrameEnvelope serializer/parser and golden vectors from the TDD. Keep the domain layer Android-free and add rejection tests.” |
-| #15 | “Create a QR codec spike using a JVM-compatible dependency. Prove encode/decode with fixture bytes, document license and payload limits, and do not add NDK.” |
+| #15 | Selesai pada checkpoint QR: ZXing Core 3.5.4, adapter encode/decode, binary fixture round-trip, ADR, dan dependency license note. Physical-device benchmark tetap terbuka. |
 | #16 | “Implement sender file picking, streaming SHA-256, metadata frame, sequential chunk adapter, looping QR renderer, pause/cancel, and lifecycle-safe screen-on.” |
 | #17 | “Implement CameraX Preview and ImageAnalysis with KEEP_ONLY_LATEST. Always close ImageProxy in finally. Add permission, denial, retry, and decoder adapter states.” |
 | #18 | “Implement bounded reconstruction, SHA-256 verification, ACTION_CREATE_DOCUMENT save flow, Unicode filename sanitization, and cleanup on cancel/failure.” |
