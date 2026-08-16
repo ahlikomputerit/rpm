@@ -180,7 +180,7 @@ Frame metadata payload menggunakan struktur length-prefixed UTF-8 untuk `fileNam
 
 `FrameSerializer` menghasilkan `ByteArray`. `QrEncoder` menerima adapter `ByteArray -> QrMatrix` atau `ByteArray -> String`, tergantung library yang dipilih pada Issue 03. Jika library hanya menerima string, gunakan Base64 URL-safe tanpa newline sebagai adapter sementara dan ukur overhead. Jangan menjadikan Base64 sebagai kontrak domain.
 
-QR version, correction level, margin, dan payload budget harus disentralisasi di `ProtocolConstants`. Default awal bersifat konservatif. Tuning hanya boleh mengubah konfigurasi, bukan format envelope.
+QR version, correction level, margin, dan payload budget harus disentralisasi di `ProtocolConstants`. Default awal bersifat konservatif. Tuning hanya boleh mengubah konfigurasi, bukan format envelope. Untuk physical-device scanability, sender checkpoint terbaru memakai block size 256 byte, error correction M, dan quiet zone margin 4; wire envelope tetap menerima payload sampai 1024 byte untuk compatibility.
 
 ### 5.4 Sender scheduling
 
@@ -244,7 +244,7 @@ CameraX Preview + ImageAnalysis
   → ReceiveViewModel state
 ```
 
-CameraX `ImageAnalysis` memberikan frame CPU-accessible melalui `ImageAnalysis.Analyzer`; analyzer harus cepat dan memanggil `ImageProxy.close()` setelah selesai.[2] Gunakan `STRATEGY_KEEP_ONLY_LATEST` agar frame lama yang tidak lagi berguna dibuang ketika decoder tertinggal. Decode tidak boleh menjalankan operasi blocking panjang di main thread.
+CameraX `ImageAnalysis` memberikan frame CPU-accessible melalui `ImageAnalysis.Analyzer`; analyzer harus cepat dan memanggil `ImageProxy.close()` setelah selesai.[2] Gunakan `STRATEGY_KEEP_ONLY_LATEST` agar frame lama yang tidak lagi berguna dibuang ketika decoder tertinggal. Decode tidak boleh menjalankan operasi blocking panjang di main thread. Lifecycle receiver harus menjaga camera bind idempotent; event `ON_START` dan initial-state check tidak boleh membuat dua bind asynchronous untuk satu composable.
 
 Analyzer harus memisahkan tiga langkah: ekstraksi frame kamera, QR decode, dan pengiriman hasil ke domain. `ImageProxy` harus ditutup dalam `finally`. Hasil decode harus disalin sebelum analyzer mengembalikan buffer ke CameraX. Live QR decoder wajib menggunakan ZXing detector normal pada full preview; `PURE_BARCODE` hanya boleh menjadi fallback untuk bitmap yang telah tercrop. Regression fixture harus menempatkan QR di dalam frame yang lebih besar dan menguji payload padat, bukan hanya bitmap QR ideal.
 
@@ -442,7 +442,7 @@ Prompt lanjutan harus diberikan satu per satu setelah checkpoint build hijau.
 | #20 | Selesai pada checkpoint state machine: immutable `TransferState`, pure reducer, `TransferStore`, sender/receiver event wiring, cancellation, timeout watchdog, rotation events, error transitions, and cleanup tests. Physical-device lifecycle QA tetap terbuka. |
 | #21 | Selesai pada checkpoint diagnostics: immutable payload-free model/reducer/store, sender/receiver event wiring, timing/counters/goodput, JSON export melalui SAF, dan unit tests. Physical-device benchmark tetap terbuka pada #23. |
 | #22 | Selesai pada checkpoint UX hardening: privacy notice persisted lokal sebelum first transfer, Material 3 light/dark scheme, scrollable landscape-safe screens, screen-reader labels, live-region updates, brightness/distance guidance, sender pause and receiver camera unbind on host stop, serta accessible permission/checksum/reconstruction errors. Physical-device accessibility/lifecycle QA tetap terbuka pada #23. |
-| #23 | “Prepare a physical-device QA checklist and release candidate. Test with Wi-Fi, Bluetooth, and mobile data disabled after installation.” Diagnosis uji perangkat terbaru dicatat di [`docs/OPTICAL-TRANSFER-DEVICE-DIAGNOSIS.md`](./OPTICAL-TRANSFER-DEVICE-DIAGNOSIS.md); re-test diperlukan setelah live QR decoder diperbaiki. |
+| #23 | “Prepare a physical-device QA checklist and release candidate. Test with Wi-Fi, Bluetooth, and mobile data disabled after installation.” Diagnosis dua uji perangkat dicatat di [`docs/OPTICAL-TRANSFER-DEVICE-DIAGNOSIS.md`](./OPTICAL-TRANSFER-DEVICE-DIAGNOSIS.md); re-test diperlukan setelah full-preview decoder, block size 256, QR margin 4, dan camera bind guard diperbaiki. |
 | #24 | “Write the final Android README, AI Studio ZIP handoff guide, Android Studio import steps, device test guide, troubleshooting, known limitations, and privacy statement.” |
 
 ## 20. Definition of technical completion

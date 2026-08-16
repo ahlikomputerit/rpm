@@ -95,7 +95,10 @@ fun ReceiveScreen(
         if (state.permission != CameraPermissionState.Granted) {
             onDispose { }
         } else {
+            var cameraBound = false
             fun bindCamera() {
+                if (cameraBound) return
+                cameraBound = true
                 viewModel.onCameraStarted()
                 cameraSession.bind(
                     lifecycleOwner = lifecycleOwner,
@@ -109,8 +112,11 @@ fun ReceiveScreen(
                 when (event) {
                     Lifecycle.Event.ON_START -> bindCamera()
                     Lifecycle.Event.ON_STOP -> {
-                        cameraSession.unbind()
-                        viewModel.onHostStopped()
+                        if (cameraBound) {
+                            cameraBound = false
+                            cameraSession.unbind()
+                            viewModel.onHostStopped()
+                        }
                     }
                     else -> Unit
                 }
@@ -121,8 +127,11 @@ fun ReceiveScreen(
             }
             onDispose {
                 lifecycleOwner.lifecycle.removeObserver(observer)
-                cameraSession.unbind()
-                viewModel.onHostStopped()
+                if (cameraBound) {
+                    cameraBound = false
+                    cameraSession.unbind()
+                    viewModel.onHostStopped()
+                }
             }
         }
     }

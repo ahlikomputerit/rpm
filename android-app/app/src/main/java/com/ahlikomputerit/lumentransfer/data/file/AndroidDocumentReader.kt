@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import com.ahlikomputerit.lumentransfer.domain.integrity.Sha256Hasher
 import com.ahlikomputerit.lumentransfer.domain.model.FileMetadata
 import com.ahlikomputerit.lumentransfer.domain.model.TransferId
+import com.ahlikomputerit.lumentransfer.domain.protocol.ProtocolConstants
 import java.io.ByteArrayOutputStream
 import java.util.UUID
 
@@ -20,7 +21,7 @@ class AndroidDocumentReader(private val contentResolver: ContentResolver) {
         require(size <= 10L * 1024L * 1024L) { "File exceeds the MVP 10 MB limit" }
         val checksum = contentResolver.openInputStream(uri)?.use(Sha256Hasher::compute)
             ?: error("Unable to open selected document")
-        val blockSize = 1024
+        val blockSize = ProtocolConstants.DEFAULT_BLOCK_SIZE
         val blocks = if (size == 0L) 0 else ((size + blockSize - 1) / blockSize).toInt()
         return SelectedDocument(
             uri = uri,

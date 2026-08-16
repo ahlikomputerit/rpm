@@ -18,7 +18,7 @@ import java.util.EnumMap
 
 class ZxingQrEncoder(
     private val errorCorrection: ErrorCorrectionLevel = ErrorCorrectionLevel.M,
-    private val margin: Int = 2,
+    private val margin: Int = 4,
 ) : QrEncoder {
     override fun encode(payload: ByteArray): QrMatrix {
         require(payload.isNotEmpty()) { "QR payload must not be empty" }

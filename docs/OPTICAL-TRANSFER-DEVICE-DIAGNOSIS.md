@@ -53,3 +53,13 @@ Sesi dianggap melewati tahap decoder apabila receiver menunjukkan `acceptedFrame
 ## Referensi
 
 [1]: https://developer.android.com/media/camera/camerax/analyze "Android Developers — Image analysis"
+
+## Bukti uji kedua
+
+Diagnostics kedua kembali menunjukkan kegagalan sebelum protocol parser, tetapi kini kategorinya lebih informatif: receiver mencatat `rejectedFrames = 1210`, seluruhnya `qrNotFoundFrames = 1210`, dengan `invalidProtocolFrames = 0` dan `transferIdMismatchFrames = 0`. Sender memancarkan 677 frame dengan 676 systematic frame. Ini mengesampingkan CRC, Base64, envelope, dan transfer-ID sebagai titik pertama kegagalan.
+
+Sesi receiver kedua berakhir dengan `CAMERA_UNAVAILABLE` setelah sekitar 98 detik. Audit lifecycle menemukan receiver dapat memanggil `bindCamera()` melalui event `ON_START` dan sekali lagi melalui pemeriksaan `currentState.isAtLeast(STARTED)` pada efek yang sama. Guard `cameraBound` sekarang mencegah double-bind dan mengurangi risiko konflik CameraX pada re-entry.
+
+Selain guard lifecycle, ukuran block sender diturunkan dari 1.024 menjadi 256 byte. Dengan Base64 URL-safe dan ZXing error correction M, estimasi matrix untuk payload wire sekitar 1.024, 512, dan 256 byte masing-masing adalah 145, 109, dan 81 modul sebelum margin layar. Frame 256-byte memberi lebih banyak piksel per modul pada jarak kamera yang sama, sehingga lebih sesuai untuk QR yang dipindai dari layar ponsel. Quiet zone encoder juga dinaikkan dari margin 2 menjadi 4 modul.
+
+Perubahan kedua ini belum dapat dinyatakan berhasil secara physical-device sampai diagnostics berikutnya menunjukkan `acceptedFrames > 0`.
