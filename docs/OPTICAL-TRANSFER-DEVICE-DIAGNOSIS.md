@@ -17,6 +17,8 @@ Uji nyata gagal sebelum satu pun frame protocol diterima receiver. Sender memang
 
 ## Akar masalah
 
+Bukti baru dari pengguna mempersempit akar masalah: QR yang sama dapat dibaca QR reader bawaan HP, sehingga QR sender valid. Regression fixture lama ternyata juga memakai urutan `A, R, G, B`, mengikuti asumsi salah pada decoder. CameraX `OUTPUT_IMAGE_FORMAT_RGBA_8888` menggunakan `R, G, B, A`. Decoder live sebelumnya membaca byte pertama sebagai alpha dan byte keempat sebagai blue; akibatnya nilai alpha konstan masuk ke luminance blue channel dan pola hitam-putih dapat menjadi hampir seragam bagi ZXing. Perbaikan channel mapping ini adalah kandidat akar masalah utama dan sudah diuji dengan fixture RGBA yang benar.
+
 Implementasi sebelumnya menambahkan `DecodeHintType.PURE_BARCODE = true` pada `QRCodeReader` yang diberi **seluruh frame kamera**. Hint tersebut cocok untuk bitmap yang sudah berisi QR saja atau telah dicrop menjadi barcode murni. CameraX receiver justru mengirim preview penuh dengan background, perspektif, dan QR berada di sebagian area gambar. Akibatnya ZXing gagal menemukan QR pada setiap image-analysis frame sebelum `FrameSerializer.parse()` dipanggil.
 
 Perbaikan mengubah urutan decoding menjadi berikut:
@@ -24,7 +26,7 @@ Perbaikan mengubah urutan decoding menjadi berikut:
 1. Jalankan ZXing detector normal dengan `TRY_HARDER` dan `POSSIBLE_FORMATS = QR_CODE` pada full camera preview.
 2. Gunakan `PURE_BARCODE` hanya sebagai fallback untuk fixture atau input yang memang sudah tercrop.
 3. Tidak melakukan rotasi ulang terhadap seluruh buffer kamera. `rotationDegrees` adalah orientasi display; detector QR dapat menemukan finder pattern pada orientasi yang didukung, sementara rotasi global sebelumnya berpotensi mengubah relasi buffer yang sudah disediakan CameraX.
-4. Pertahankan pembacaan channel CameraX dalam urutan `A, R, G, B`. Dokumentasi resmi CameraX menjelaskan bahwa `OUTPUT_IMAGE_FORMAT_RGBA_8888` menempatkan alpha, red, green, dan blue pada urutan byte tersebut.[1]
+4. Pertahankan pembacaan channel CameraX dalam urutan `R, G, B, A`. Dokumentasi resmi CameraX menjelaskan bahwa `OUTPUT_IMAGE_FORMAT_RGBA_8888` menggunakan urutan red, green, blue, lalu alpha pada indeks byte yang meningkat.[1]
 
 ## Perubahan diagnosis
 

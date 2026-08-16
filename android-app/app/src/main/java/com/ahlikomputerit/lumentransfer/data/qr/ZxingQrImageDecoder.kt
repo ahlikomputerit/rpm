@@ -25,11 +25,11 @@ class ZxingQrImageDecoder : QrImageDecoder {
         for (y in 0 until height) {
             for (x in 0 until width) {
                 val offset = y * rowStride + x * pixelStride
-                // CameraX RGBA_8888 exposes bytes as A, R, G, B in the first plane.
-                val alpha = rgba[offset].toInt() and 0xFF
-                val red = rgba[offset + 1].toInt() and 0xFF
-                val green = rgba[offset + 2].toInt() and 0xFF
-                val blue = rgba[offset + 3].toInt() and 0xFF
+                // CameraX RGBA_8888 exposes bytes as R, G, B, A in the first plane.
+                val red = rgba[offset].toInt() and 0xFF
+                val green = rgba[offset + 1].toInt() and 0xFF
+                val blue = rgba[offset + 2].toInt() and 0xFF
+                val alpha = rgba[offset + 3].toInt() and 0xFF
                 argb[y * width + x] = (alpha shl 24) or (red shl 16) or (green shl 8) or blue
             }
         }

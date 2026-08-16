@@ -72,10 +72,10 @@ class ZxingQrImageDecoderTest {
             for (x in 0 until modules) {
                 val offset = (y * modules + x) * 4
                 val value = if (isDark(x, y)) 0 else 0xFF
-                output[offset] = 0xFF.toByte()
+                output[offset] = value.toByte()
                 output[offset + 1] = value.toByte()
                 output[offset + 2] = value.toByte()
-                output[offset + 3] = value.toByte()
+                output[offset + 3] = 0xFF.toByte()
             }
         }
         return output
@@ -102,9 +102,10 @@ class ZxingQrImageDecoderTest {
                         val x = left + moduleX * scale + dx
                         val y = top + moduleY * scale + dy
                         val offset = (y * width + x) * 4
+                        output[offset] = 0
                         output[offset + 1] = 0
                         output[offset + 2] = 0
-                        output[offset + 3] = 0
+                        output[offset + 3] = 0xFF.toByte()
                     }
                 }
             }

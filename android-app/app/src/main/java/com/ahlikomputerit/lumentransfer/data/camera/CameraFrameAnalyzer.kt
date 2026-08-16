@@ -50,9 +50,9 @@ class CameraFrameAnalyzer(
             for (x in 0 until frame.width step xStep) {
                 val offset = y * frame.rowStride + x * frame.pixelStride
                 if (offset < 0 || offset + 3 >= frame.bytes.size) continue
-                val red = frame.bytes[offset + 1].toInt() and 0xFF
-                val green = frame.bytes[offset + 2].toInt() and 0xFF
-                val blue = frame.bytes[offset + 3].toInt() and 0xFF
+                val red = frame.bytes[offset].toInt() and 0xFF
+                val green = frame.bytes[offset + 1].toInt() and 0xFF
+                val blue = frame.bytes[offset + 2].toInt() and 0xFF
                 val luma = (299 * red + 587 * green + 114 * blue) / 1_000
                 min = minOf(min, luma)
                 max = maxOf(max, luma)
