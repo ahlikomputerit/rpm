@@ -12,8 +12,14 @@ import com.ahlikomputerit.lumentransfer.domain.model.FrameEnvelope
 import com.ahlikomputerit.lumentransfer.domain.model.FrameKind
 import com.ahlikomputerit.lumentransfer.domain.protocol.FountainFrameSource
 import com.ahlikomputerit.lumentransfer.domain.protocol.FrameSerializer
+import com.ahlikomputerit.lumentransfer.domain.model.TransferError
 import com.ahlikomputerit.lumentransfer.domain.runtime.NoOpScreenOnPolicy
 import com.ahlikomputerit.lumentransfer.domain.runtime.ScreenOnPolicy
+import com.ahlikomputerit.lumentransfer.domain.state.TransferEvent
+import com.ahlikomputerit.lumentransfer.domain.state.TransferPhase
+import com.ahlikomputerit.lumentransfer.domain.state.TransferRole
+import com.ahlikomputerit.lumentransfer.domain.state.TransferState
+import com.ahlikomputerit.lumentransfer.domain.state.TransferStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -52,6 +58,8 @@ class SendViewModel(
     private val qrEncoder = ZxingQrEncoder()
     private val _uiState = MutableStateFlow(SendUiState())
     val uiState: StateFlow<SendUiState> = _uiState.asStateFlow()
+    private val transferStore = TransferStore(TransferState(TransferRole.SEND))
+    val transferState: StateFlow<TransferState> = transferStore.state
 
     private var senderJob: Job? = null
     private var frameSource: FountainFrameSource? = null
@@ -76,12 +84,14 @@ class SendViewModel(
                 )
                 document to qrEncoder.encode(FrameSerializer.serialize(previewFrame))
             }.onSuccess { (document, qrPreview) ->
+                transferStore.dispatch(TransferEvent.FilePrepared(document.metadata, System.currentTimeMillis()))
                 _uiState.value = SendUiState(
                     status = SendStatus.Ready,
                     selected = document,
                     qrPreview = qrPreview,
                 )
             }.onFailure { error ->
+                transferStore.dispatch(TransferEvent.Failed(TransferError.FILE_UNREADABLE, error.message ?: "Unable to prepare selected file", System.currentTimeMillis()))
                 _uiState.value = SendUiState(
                     status = SendStatus.Failed(error.message ?: "Unable to prepare selected file"),
                 )
@@ -94,6 +104,12 @@ class SendViewModel(
         if (senderJob?.isActive == true) return
 
         screenOnPolicy.acquire()
+        val now = System.currentTimeMillis()
+        if (transferState.value.phase == TransferPhase.PAUSED) {
+            transferStore.dispatch(TransferEvent.SenderResumed(now, SESSION_TIMEOUT_MS))
+        } else {
+            transferStore.dispatch(TransferEvent.SenderStarted(now, SESSION_TIMEOUT_MS))
+        }
         _uiState.update { it.copy(senderStatus = SenderStatus.Running(0, FrameKind.META)) }
         senderJob = viewModelScope.launch(Dispatchers.Default) {
             var frameNumber = (_uiState.value.senderStatus as? SenderStatus.Paused)?.frameNumber ?: 0L
@@ -105,6 +121,7 @@ class SendViewModel(
                     val envelope = source.nextEnvelope()
                     val qr = qrEncoder.encode(FrameSerializer.serialize(envelope))
                     frameNumber += 1
+                    transferStore.dispatch(TransferEvent.FrameEmitted(envelope.kind, envelope.sequence, System.currentTimeMillis()))
                     _uiState.update {
                         it.copy(
                             qrPreview = qr,
@@ -117,6 +134,7 @@ class SendViewModel(
             } catch (_: CancellationException) {
                 // Pause/cancel is an expected lifecycle event.
             } catch (error: Throwable) {
+                transferStore.dispatch(TransferEvent.Failed(TransferError.FILE_UNREADABLE, error.message ?: "Sender failed", System.currentTimeMillis()))
                 _uiState.update {
                     it.copy(senderStatus = SenderStatus.Idle, status = SendStatus.Failed(error.message ?: "Sender failed"))
                 }
@@ -133,6 +151,7 @@ class SendViewModel(
             is SenderStatus.Paused -> current.frameNumber
             SenderStatus.Idle -> return
         }
+        transferStore.dispatch(TransferEvent.SenderPaused(System.currentTimeMillis()))
         _uiState.update { it.copy(senderStatus = SenderStatus.Paused(frameNumber)) }
         senderJob?.cancel()
         senderJob = null
@@ -142,6 +161,9 @@ class SendViewModel(
     fun cancelSending() {
         senderJob?.cancel()
         senderJob = null
+        if (transferState.value.phase !in setOf(TransferPhase.IDLE, TransferPhase.CANCELLED, TransferPhase.SAVED)) {
+            transferStore.dispatch(TransferEvent.Cancelled(System.currentTimeMillis()))
+        }
         frameSource?.close()
         frameSource = null
         screenOnPolicy.release()
@@ -150,7 +172,12 @@ class SendViewModel(
 
     fun clearSelection() {
         cancelSending()
+        transferStore.dispatch(TransferEvent.Reset(System.currentTimeMillis()))
         _uiState.value = SendUiState()
+    }
+
+    fun onRotationChanged(degrees: Int) {
+        transferStore.dispatch(TransferEvent.RotationChanged(degrees, System.currentTimeMillis()))
     }
 
     override fun onCleared() {
@@ -160,6 +187,7 @@ class SendViewModel(
 
     companion object {
         private const val FRAME_INTERVAL_MS = 120L
+        private const val SESSION_TIMEOUT_MS = 30_000L
 
         fun factory(
             contentResolver: ContentResolver,

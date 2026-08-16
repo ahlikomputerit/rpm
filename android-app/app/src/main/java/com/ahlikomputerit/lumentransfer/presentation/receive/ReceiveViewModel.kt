@@ -11,12 +11,24 @@ import com.ahlikomputerit.lumentransfer.data.file.sanitizeDocumentName
 import com.ahlikomputerit.lumentransfer.domain.model.FileMetadata
 import com.ahlikomputerit.lumentransfer.domain.model.FrameEnvelope
 import com.ahlikomputerit.lumentransfer.domain.model.FrameKind
+import com.ahlikomputerit.lumentransfer.domain.model.TransferError
 import com.ahlikomputerit.lumentransfer.domain.model.TransferId
 import com.ahlikomputerit.lumentransfer.domain.protocol.FountainReconstructor
 import com.ahlikomputerit.lumentransfer.domain.protocol.MetadataFrameCodec
 import com.ahlikomputerit.lumentransfer.domain.protocol.ReconstructionProgress
+import com.ahlikomputerit.lumentransfer.domain.state.TransferEvent
+import com.ahlikomputerit.lumentransfer.domain.state.TransferPhase
+import com.ahlikomputerit.lumentransfer.domain.state.TransferRole
+import com.ahlikomputerit.lumentransfer.domain.state.TransferState
+import com.ahlikomputerit.lumentransfer.domain.state.TransferStore
 import java.io.File
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,11 +66,16 @@ data class ReceiveUiState(
 class ReceiveViewModel(
     filesDir: File = File(System.getProperty("java.io.tmpdir"), "lumen-receive-default").apply { mkdirs() },
     private val documentSaver: DocumentSaver = UnavailableDocumentSaver,
+    private val timeoutDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ReceiveUiState())
     val uiState: StateFlow<ReceiveUiState> = _uiState.asStateFlow()
     private val acceptedKeys = HashSet<String>()
     private val reconstructor = FountainReconstructor(filesDir)
+    private val transferStore = TransferStore(TransferState(TransferRole.RECEIVE))
+    val transferState: StateFlow<TransferState> = transferStore.state
+    private val timeoutScope = CoroutineScope(SupervisorJob() + timeoutDispatcher)
+    private var timeoutJob: Job? = null
 
     fun markPermissionRequested() {
         _uiState.update { it.copy(message = "Kamera diperlukan untuk membaca QR frame.") }
@@ -76,13 +93,21 @@ class ReceiveViewModel(
                 message = if (granted) "Scanning QR frame…" else "Permission kamera belum diberikan.",
             )
         }
+        if (!granted) {
+            timeoutJob?.cancel()
+            transferStore.dispatch(TransferEvent.Failed(TransferError.CAMERA_PERMISSION_DENIED, "Permission kamera belum diberikan", now()))
+        }
     }
 
     fun onCameraStarted() {
         _uiState.update { it.copy(isScanning = true, message = "Scanning QR frame…") }
+        transferStore.dispatch(TransferEvent.ReceiverStarted(now(), SESSION_TIMEOUT_MS))
+        startTimeoutWatch()
     }
 
     fun onCameraError(error: Throwable) {
+        timeoutJob?.cancel()
+        transferStore.dispatch(TransferEvent.Failed(TransferError.CAMERA_UNAVAILABLE, error.message ?: "Camera unavailable", now()))
         _uiState.update {
             it.copy(
                 isScanning = false,
@@ -108,6 +133,7 @@ class ReceiveViewModel(
                 FrameKind.META -> {
                     val metadata = MetadataFrameCodec.decode(frame.transferId, frame.payload)
                     reconstructor.acceptMetadata(metadata)
+                    transferStore.dispatch(TransferEvent.FilePrepared(metadata, now()))
                     acceptedKeys.add(key)
                     updateForAcceptedFrame(frame, ReconstructionState.Receiving(reconstructor.progress()), metadata)
                     maybeVerifyCompleted()
@@ -134,6 +160,7 @@ class ReceiveViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { documentSaver.save(source, uri) }
                 .onSuccess {
+                    transferStore.dispatch(TransferEvent.Saved(now()))
                     _uiState.update {
                         it.copy(
                             message = "File berhasil disimpan.",
@@ -143,6 +170,7 @@ class ReceiveViewModel(
                     reconstructor.cleanup()
                 }
                 .onFailure { error ->
+                    transferStore.dispatch(TransferEvent.Failed(TransferError.STORAGE_WRITE_FAILED, error.message ?: "Gagal menyimpan file", now()))
                     _uiState.update {
                         it.copy(reconstruction = ReconstructionState.Failed(error.message ?: "Gagal menyimpan file"))
                     }
@@ -165,12 +193,28 @@ class ReceiveViewModel(
     }
 
     fun resetSession() {
+        timeoutJob?.cancel()
         acceptedKeys.clear()
         reconstructor.cleanup()
+        transferStore.dispatch(TransferEvent.Reset(now()))
         _uiState.value = ReceiveUiState(permission = _uiState.value.permission)
     }
 
+    fun cancelSession() {
+        timeoutJob?.cancel()
+        transferStore.dispatch(TransferEvent.Cancelled(now()))
+        acceptedKeys.clear()
+        reconstructor.cleanup()
+        _uiState.update { it.copy(isScanning = false, reconstruction = ReconstructionState.Failed("SESSION_CANCELLED")) }
+    }
+
+    fun onRotationChanged(degrees: Int) {
+        transferStore.dispatch(TransferEvent.RotationChanged(degrees, now()))
+    }
+
     override fun onCleared() {
+        timeoutJob?.cancel()
+        timeoutScope.cancel()
         reconstructor.close()
         super.onCleared()
     }
@@ -184,6 +228,8 @@ class ReceiveViewModel(
                     return ReceiveViewModel(filesDir, documentSaver) as T
                 }
             }
+
+        private const val SESSION_TIMEOUT_MS = 30_000L
     }
 
     private fun updateForAcceptedFrame(
@@ -191,6 +237,19 @@ class ReceiveViewModel(
         reconstruction: ReconstructionState,
         metadata: FileMetadata?,
     ) {
+        val progress = (reconstruction as? ReconstructionState.Receiving)?.progress
+        transferStore.dispatch(
+            TransferEvent.FrameAccepted(
+                transferId = frame.transferId,
+                kind = frame.kind,
+                sequence = frame.sequence,
+                recoveredBlocks = progress?.recoveredBlocks ?: 0,
+                totalBlocks = progress?.totalBlocks ?: metadata?.sourceBlockCount ?: 0,
+                equationCount = progress?.equationCount ?: 0,
+                nowMs = now(),
+            ),
+        )
+        startTimeoutWatch()
         _uiState.update {
             it.copy(
                 activeTransferId = it.activeTransferId ?: frame.transferId,
@@ -209,6 +268,8 @@ class ReceiveViewModel(
         if (!reconstructor.isComplete()) return
         if (reconstructor.verify()) {
             val metadata = reconstructor.currentMetadata() ?: return
+            transferStore.dispatch(TransferEvent.ReadyToSave(now()))
+            timeoutJob?.cancel()
             _uiState.update {
                 it.copy(
                     message = "Checksum cocok. Pilih lokasi untuk menyimpan file.",
@@ -220,6 +281,7 @@ class ReceiveViewModel(
                 )
             }
         } else {
+            transferStore.dispatch(TransferEvent.Failed(TransferError.INTEGRITY_MISMATCH, "Checksum tidak cocok", now()))
             _uiState.update {
                 it.copy(
                     message = "Checksum tidak cocok. Hasil sementara dibuang.",
@@ -228,4 +290,19 @@ class ReceiveViewModel(
             }
         }
     }
+
+    private fun startTimeoutWatch() {
+        timeoutJob?.cancel()
+        timeoutJob = timeoutScope.launch {
+            delay(SESSION_TIMEOUT_MS)
+            val state = transferState.value
+            if (state.phase == TransferPhase.SCANNING || state.phase == TransferPhase.RECEIVING) {
+                transferStore.dispatch(TransferEvent.Timeout(now()))
+                _uiState.update { it.copy(isScanning = false, message = "Transfer timeout karena tidak ada frame baru") }
+            }
+        }
+    }
+
+    private fun now(): Long = System.currentTimeMillis()
+
 }
