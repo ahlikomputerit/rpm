@@ -14,7 +14,7 @@ Frame systematic menggunakan `kind=SYSTEMATIC_DATA`, `seed=sourceBlockIndex`, `d
 
 Systematic frames mempertahankan kompatibilitas dan recovery cepat ketika tidak ada frame yang hilang. Repair frames membuat dropped, duplicate, dan out-of-order frame tidak langsung menggagalkan transfer. Receiver tidak perlu menahan seluruh frame yang diterima sebagai daftar mentah; ia menyimpan maksimal satu equation per pivot dan melakukan elimination saat equation baru datang.
 
-Pada checkpoint ini, repair budget ditetapkan sebesar `max(4, ceil(sourceBlockCount × 0.75))`. Nilai ini adalah baseline engineering, bukan jaminan probabilistik untuk semua pola kehilangan frame. Physical-device benchmark akan menentukan apakah ratio tersebut perlu dinaikkan atau distribusi degree perlu diperbaiki.
+Pada checkpoint throughput, repair budget ditetapkan sebesar `max(4, ceil(sourceBlockCount × 0.50))`. Nilai ini adalah baseline engineering, bukan jaminan probabilistik untuk semua pola kehilangan frame. Rasio 50% mengurangi overhead 75% yang membuat file sekitar 1 MB terlalu lama pada transfer optical; physical-device loss-rate benchmark akan menentukan apakah ratio ini cukup atau perlu dinaikkan. SHA-256 dan CRC32 tetap menjaga integritas dan tidak dikurangi.
 
 ## Batasan memori
 

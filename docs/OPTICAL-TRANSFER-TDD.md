@@ -180,7 +180,7 @@ Frame metadata payload menggunakan struktur length-prefixed UTF-8 untuk `fileNam
 
 `FrameSerializer` menghasilkan `ByteArray`. `QrEncoder` menerima adapter `ByteArray -> QrMatrix` atau `ByteArray -> String`, tergantung library yang dipilih pada Issue 03. Jika library hanya menerima string, gunakan Base64 URL-safe tanpa newline sebagai adapter sementara dan ukur overhead. Jangan menjadikan Base64 sebagai kontrak domain.
 
-QR version, correction level, margin, dan payload budget harus disentralisasi di `ProtocolConstants`. Default awal bersifat konservatif. Tuning hanya boleh mengubah konfigurasi, bukan format envelope. Untuk physical-device scanability, sender checkpoint terbaru memakai block size 256 byte, error correction M, dan quiet zone margin 4; wire envelope tetap menerima payload sampai 1024 byte untuk compatibility.
+QR version, correction level, margin, dan payload budget harus disentralisasi di `ProtocolConstants`. Default awal bersifat konservatif. Tuning hanya boleh mengubah konfigurasi, bukan format envelope. Untuk physical-device scanability dan throughput, sender checkpoint terbaru memakai block size 512 byte, error correction M, dan quiet zone margin 4; wire envelope tetap menerima payload sampai 1024 byte untuk compatibility. Interval sender ditargetkan 80 ms dan repair budget fountain 50% dengan minimum empat frame; physical-device loss-rate benchmark tetap menjadi gate sebelum menaikkan agresivitas lebih jauh.
 
 ### 5.4 Sender scheduling
 

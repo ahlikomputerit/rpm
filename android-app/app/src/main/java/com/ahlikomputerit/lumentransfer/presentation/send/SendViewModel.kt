@@ -213,7 +213,7 @@ class SendViewModel(
     }
 
     companion object {
-        private const val FRAME_INTERVAL_MS = 120L
+        private const val FRAME_INTERVAL_MS = 80L
         private const val SESSION_TIMEOUT_MS = 30_000L
 
         fun factory(

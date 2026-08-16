@@ -7,6 +7,6 @@ object ProtocolConstants {
     const val HEADER_SIZE = 35
     const val CRC_SIZE = 4
     const val MAX_PAYLOAD_BYTES = 1024
-    const val DEFAULT_BLOCK_SIZE = 256
+    const val DEFAULT_BLOCK_SIZE = 512
     const val MAX_FILE_BYTES = 10L * 1024L * 1024L
 }

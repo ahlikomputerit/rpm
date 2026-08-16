@@ -84,3 +84,9 @@ Karena perbaikan decoder, block size, QR margin, dan bind guard belum mengubah `
 Decoder juga sekarang mencoba full frame, center crop 80%, center crop 60%, HybridBinarizer, GlobalHistogramBinarizer, dan pure-barcode fallback. Sender renderer memakai batas pixel integer per QR module untuk mengurangi blur pada ukuran matrix non-integer.
 
 Jika diagnostics berikutnya memiliki `cameraFramesAnalyzed = 0`, masalahnya berada pada camera binding/analyzer lifecycle. Jika `cameraFramesAnalyzed > 0` tetapi luma hampir seragam, receiver tidak melihat layar sender atau exposure/preview bermasalah. Jika luma memiliki rentang lebar dan `lastQrModules` rendah tetapi `qrNotFoundFrames` tetap tinggi, fokus berikutnya adalah format/crop/rotation image input dan bukan fountain protocol.
+
+## Optimasi throughput untuk file kecil
+
+Baseline sebelumnya menggunakan block size 256 byte dan repair budget 75%. Untuk file sekitar 1 MiB, konfigurasi tersebut menghasilkan kira-kira 4.096 systematic frames dan 3.072 repair frames, belum termasuk metadata dan END. Dengan interval 120 ms, batas teoritisnya sekitar 860 detik atau lebih dari 14 menit, sebelum memperhitungkan frame yang hilang dan decode camera.
+
+Checkpoint throughput baru menggunakan block size 512 byte, interval sender 80 ms, dan repair budget 50% dengan minimum empat repair frame. Untuk file sekitar 1 MiB, jumlah frame nominal turun menjadi sekitar 2.048 systematic + 1.024 repair; batas teoritis pada interval tersebut sekitar 246 detik atau 4,1 menit sebelum loss/retry. Ini adalah estimasi upper-bound dari scheduler, bukan jaminan physical-device throughput. SHA-256, CRC32, dan recovery fountain tetap aktif.

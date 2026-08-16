@@ -5,7 +5,7 @@ import kotlin.math.max
 
 object FountainCodec {
     fun repairFrameBudget(sourceBlockCount: Int): Int =
-        if (sourceBlockCount == 0) 0 else max(4, ceil(sourceBlockCount * 0.75).toInt())
+        if (sourceBlockCount == 0) 0 else max(4, ceil(sourceBlockCount * 0.50).toInt())
 
     fun degree(seed: Long, sourceBlockCount: Int): Int {
         if (sourceBlockCount <= 1) return sourceBlockCount
