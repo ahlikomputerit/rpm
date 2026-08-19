@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PCA-Lite</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">PERSONAL COMPUTER AGENT</p>
+          <h1>PCA-Lite</h1>
+          <p class="muted">Browser-first agent ringan untuk laptop dan VPS kecil.</p>
+        </div>
+        <button id="stopAll" class="danger">Emergency stop</button>
+      </header>
+
+      <section class="grid">
+        <article class="panel">
+          <div class="panel-title">
+            <h2>Buat task</h2>
+            <span class="badge">single worker</span>
+          </div>
+          <form id="taskForm">
+            <label for="instruction">Instruksi</label>
+            <textarea id="instruction" required placeholder="Contoh: buka halaman ini, baca isi utamanya, lalu buat ringkasan."></textarea>
+
+            <label for="startUrl">URL awal</label>
+            <input id="startUrl" type="url" placeholder="https://example.com" />
+
+            <label for="domains">Domain yang diizinkan</label>
+            <input id="domains" placeholder="example.com, docs.example.com" />
+            <p class="hint">Kosongkan jika URL awal akan dipakai sebagai allowlist otomatis.</p>
+
+            <label for="mode">Mode</label>
+            <select id="mode">
+              <option value="manual_approval">Manual approval</option>
+              <option value="read_only">Read only</option>
+            </select>
+
+            <button class="primary" type="submit">Jalankan task</button>
+          </form>
+          <div id="formMessage" class="message hidden"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-title">
+            <h2>Approval tertunda</h2>
+            <span id="approvalCount" class="badge">0</span>
+          </div>
+          <div id="approvals" class="stack empty">Belum ada approval.</div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <h2>Task</h2>
+          <button id="refresh" class="ghost">Refresh</button>
+        </div>
+        <div id="tasks" class="stack empty">Belum ada task.</div>
+      </section>
+
+      <section id="detailPanel" class="panel hidden">
+        <div class="panel-title">
+          <h2>Event log</h2>
+          <span id="detailStatus" class="badge"></span>
+        </div>
+        <p id="detailInstruction" class="muted"></p>
+        <div id="events" class="events"></div>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
